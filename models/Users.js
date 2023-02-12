@@ -8,6 +8,8 @@ const UserSchema = new mongoose.Schema(
     email: { type: String },
     password: { type: String },
     role: { type: String, default: "client" },
+    mobileNo: { type: String },
+    referral: { type: String },
     isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }

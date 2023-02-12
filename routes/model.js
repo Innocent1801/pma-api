@@ -109,7 +109,7 @@ router.post("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
     if (model) {
       if (req.body.videos) {
-        await model.updateOne({ $push: { videos: req.body.photos } });
+        await model.updateOne({ $push: { videos: req.body.videos } });
       } else {
         await model.updateOne({ $push: { photos: req.body.photos } });
       }
