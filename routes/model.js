@@ -123,21 +123,21 @@ router.post("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // make payment
-router.post("/payment/model", verifyTokenAndAuthorization, async (req, res) => {
-  const model = await Models.findOne({ uuid: req.user.uuid });
-
+router.post("/payment/model", async (req, res) => {
   try {
-    if (model) {
+    const model = await Models.findOne({ uuid: req.body.uuid });
+
+    // if (model) {
       const newPayment = new Payment({
-        sender: model.uuid,
+        sender: req.body.userId,
         amount: req.body.amount,
-        desc: req.body.desc,
+        desc: "Subscription",
       });
       await newPayment.save();
       res.status(200).json("Payment successful");
-    } else {
-      res.status(400).json("Oops! An error occured");
-    }
+    // } else {
+    //   res.status(400).json("Oops! An error occured");
+    // }
   } catch (err) {
     res.status(500).json("Connection error!");
   }

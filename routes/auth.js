@@ -9,16 +9,14 @@ const { verifyTokenAndAdmin } = require("./jwt");
 
 // registration
 router.post("/register", async (req, res) => {
-  // encrypt password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
-  //   check if user exist
-  const findUser =
-    (await Users.findOne({ username: req.body.username })) ||
-    (await Users.findOne({ email: req.body.email }));
-
   try {
+    // encrypt password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    //   check if user exist
+    const findUser = await Users.findOne({ email: req.body.email });
+
     if (!findUser) {
       const newUser = new Users({
         firstName: req.body.firstName,
@@ -32,10 +30,25 @@ router.post("/register", async (req, res) => {
       });
       await newUser.save();
 
+      const accessToken = jwt.sign(
+        {
+          id: newUser._id,
+          uuid: newUser._id,
+          role: newUser.role,
+          email: newUser.email,
+        },
+        process.env.JWT_SEC,
+        {
+          expiresIn: "30m",
+        }
+      );
+      const { password, ...others } = newUser._doc;
+
       switch (newUser.role) {
         case "agency":
           const newAgency = new Agency({
             uuid: newUser._id,
+            email: newUser.email,
           });
           await newAgency.save();
           break;
@@ -43,6 +56,7 @@ router.post("/register", async (req, res) => {
         case "model":
           const newModel = new Models({
             uuid: newUser._id,
+            email: newUser.email,
           });
           await newModel.save();
           break;
@@ -51,7 +65,7 @@ router.post("/register", async (req, res) => {
           await newUser.save();
           break;
       }
-      res.status(200).json("Registration successful!");
+      res.status(200).json({ ...others, accessToken });
     } else {
       res.status(400).json("User already exists!");
     }
@@ -62,11 +76,11 @@ router.post("/register", async (req, res) => {
 
 // login
 router.post("/login", async (req, res) => {
-  const user = await Users.findOne({ email: req.body.email });
-  const agency = await Agency.findOne({ uuid: user?.id });
-  const model = await Models.findOne({ uuid: user?.id });
-
   try {
+    const user = await Users.findOne({ email: req.body.email });
+    const agency = await Agency.findOne({ uuid: user?.id });
+    const model = await Models.findOne({ uuid: user?.id });
+
     if (user) {
       if (bcrypt.compareSync(req.body.password, user.password)) {
         const accessToken = jwt.sign(

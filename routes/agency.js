@@ -117,15 +117,16 @@ router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // make payment
-router.post("/payment/agency", verifyTokenAndAuthorization, async (req, res) => {
-  const agency = await Agency.findOne({ uuid: req.user.uuid });
-
+router.post("/payment/agency", async (req, res) => {
   try {
+    const agency = await Agency.findOne({ uuid: req.body.uuid });
+    // console.log(agency)
+
     if (agency) {
       const newPayment = new Payment({
         sender: agency.uuid,
         amount: req.body.amount,
-        desc: req.body.desc,
+        desc: "Agency subscription",
       });
       await newPayment.save();
       res.status(200).json("Payment successful");
