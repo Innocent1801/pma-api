@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const AgencySchema = new mongoose.Schema(
   {
     uuid: { type: String },
+    fullName: { type: String },
     country: { type: String },
     followers: { type: Array },
     followings: { type: Array },

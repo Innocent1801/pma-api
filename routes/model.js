@@ -39,8 +39,8 @@ router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
 
 // get all model
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
-  const findModels = await Users.find({ role: "model" });
   try {
+    const findModels = await Users.find({ role: "model" });
     if (findModels.length > 0) {
       res.status(200).json(findModels);
     } else {
@@ -93,11 +93,13 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
     );
 
     if (user) {
+      await user.updateOne({ isUpdated: true });
       res.status(200).json({ ...user._doc, model });
     } else {
       res.status(404).json("User not found!");
     }
   } catch (err) {
+    console.log(err)
     res.status(500).json("Connection error!");
   }
 });
@@ -128,13 +130,13 @@ router.post("/payment/model", async (req, res) => {
     const model = await Models.findOne({ uuid: req.body.uuid });
 
     // if (model) {
-      const newPayment = new Payment({
-        sender: req.body.userId,
-        amount: req.body.amount,
-        desc: "Subscription",
-      });
-      await newPayment.save();
-      res.status(200).json("Payment successful");
+    const newPayment = new Payment({
+      sender: req.body.userId,
+      amount: req.body.amount,
+      desc: "Subscription",
+    });
+    await newPayment.save();
+    res.status(200).json("Payment successful");
     // } else {
     //   res.status(400).json("Oops! An error occured");
     // }

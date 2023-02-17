@@ -32,13 +32,13 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
 
 // edit
 router.put("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
-  if (req.body.password) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    req.body.password = hashedPassword;
-  }
-
   try {
+    if (req.body.password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(req.body.password, salt);
+      req.body.password = hashedPassword;
+    }
+
     const user = await Users.findByIdAndUpdate(
       req.user.id,
       { $set: req.body },

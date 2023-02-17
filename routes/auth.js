@@ -49,6 +49,7 @@ router.post("/register", async (req, res) => {
           const newAgency = new Agency({
             uuid: newUser._id,
             email: newUser.email,
+            fullName: newUser.firstName + " " + newUser.lastName
           });
           await newAgency.save();
           break;
@@ -57,6 +58,7 @@ router.post("/register", async (req, res) => {
           const newModel = new Models({
             uuid: newUser._id,
             email: newUser.email,
+            fullName: newUser.firstName + " " + newUser.lastName
           });
           await newModel.save();
           break;
