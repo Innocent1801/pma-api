@@ -4,6 +4,7 @@ const ModelSchema = new mongoose.Schema(
   {
     uuid: { type: String },
     fullName: { type: String },
+    agency: { type: String },
     photos: { type: Array },
     polaroids: { type: Array },
     compCard: { type: String },

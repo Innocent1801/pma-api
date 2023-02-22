@@ -51,6 +51,33 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// get all model without authorization
+router.get("/find/models", async (req, res) => {
+  try {
+    // filter models
+    const { model } = req.query;
+    const keys = ["country", "state"];
+
+    const search = (data) => {
+      return data.filter((item) =>
+        keys.some((key) => item[key].toLowerCase().includes(model))
+      );
+    };
+
+    const models = await Models.find();
+    if (model.length > 0) {
+      res.status(200).json(search(models));
+    } else if (models) {
+      res.status(200).json(models);
+    } else {
+      res.status(404).json("No model at the moment");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+    console.log(err)
+  }
+});
+
 // get all booked model
 router.get("/booked-models", verifyTokenAndAuthorization, async (req, res) => {
   const bookedModel = await BookModel.find();
@@ -63,7 +90,7 @@ router.get("/booked-models", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // get singular model
-router.get("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
+router.get("/:uuid", async (req, res) => {
   try {
     const model = await Models.findOne({ uuid: req.params.uuid });
     const user = await Users.findOne({ _id: model.uuid });
@@ -99,7 +126,7 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
       res.status(404).json("User not found!");
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
