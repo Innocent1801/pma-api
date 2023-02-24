@@ -6,6 +6,7 @@ const Agency = require("../models/Agency");
 const Models = require("../models/Models");
 const Admin = require("../models/Admin");
 const { verifyTokenAndAdmin } = require("./jwt");
+const Client = require("../models/Client");
 
 // registration
 router.post("/register", async (req, res) => {
@@ -49,7 +50,7 @@ router.post("/register", async (req, res) => {
           const newAgency = new Agency({
             uuid: newUser._id,
             email: newUser.email,
-            fullName: newUser.firstName + " " + newUser.lastName
+            fullName: newUser.firstName + " " + newUser.lastName,
           });
           await newAgency.save();
           break;
@@ -58,9 +59,17 @@ router.post("/register", async (req, res) => {
           const newModel = new Models({
             uuid: newUser._id,
             email: newUser.email,
-            fullName: newUser.firstName + " " + newUser.lastName
+            fullName: newUser.firstName + " " + newUser.lastName,
           });
           await newModel.save();
+          break;
+
+        case "client":
+          const newClient = new Client({
+            uuid: newUser._id,
+            email: newUser.email,
+          });
+          await newClient.save();
           break;
 
         default:
@@ -82,6 +91,7 @@ router.post("/login", async (req, res) => {
     const user = await Users.findOne({ email: req.body.email });
     const agency = await Agency.findOne({ uuid: user?.id });
     const model = await Models.findOne({ uuid: user?.id });
+    const client = await Client.findOne({ uuid: user?.id });
 
     if (user) {
       if (bcrypt.compareSync(req.body.password, user.password)) {
@@ -103,7 +113,7 @@ router.post("/login", async (req, res) => {
             break;
 
           default:
-            res.status(200).json({ ...others, accessToken });
+            res.status(200).json({ ...others, client, accessToken });
             break;
         }
       } else {
