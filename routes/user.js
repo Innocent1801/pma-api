@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Users = require("../models/Users");
+const bcrypt = require("bcrypt");
 const { verifyTokenAndAuthorization } = require("./jwt");
 
 // get all users
@@ -46,6 +47,7 @@ router.put("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
     );
     res.status(200).json(user);
   } catch (err) {
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
