@@ -14,21 +14,25 @@ router.post("/post-job", verifyTokenAndAuthorization, async (req, res) => {
         title: req.body.title,
         desc: req.body.desc,
         type: req.body.type,
-        collaboration: req.body.collaboration,
+        payMoreDetails: req.body.payMoreDetails,
         location: req.body.location,
         country: req.body.country,
         state: req.body.state,
         photos: req.body.photos,
         paymentInfo: req.body.paymentInfo,
-        product: req.body.product,
+        // product: req.body.product,
         gender: req.body.gender,
         price: req.body.price,
+        age: req.body.age,
+        height: req.body.height,
+        expire: req.body.expire,
       });
       if (newJob.photos) {
         await newJob.updateOne({ $push: { photos: req.body.photos } });
       }
       await newJob.save();
       res.status(200).json(newJob);
+      console.log(newJob)
     } catch (err) {
       res.status(500).json("Connection error!");
     }
@@ -38,7 +42,7 @@ router.post("/post-job", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // get all jobs posted
-router.get("/jobs/all", verifyTokenAndAuthorization, async (req, res) => {
+router.get("/jobs/all", async (req, res) => {
   const jobs = await Job.find();
   try {
     if (jobs.length > 0) {
@@ -67,7 +71,7 @@ router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // get a single job
-router.get("/job/:id", verifyTokenAndAuthorization, async (req, res) => {
+router.get("/job/:id", async (req, res) => {
   const job = await Job.findById(req.params.id);
   try {
     if (job) {
