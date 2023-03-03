@@ -6,6 +6,32 @@ const Payment = require("../models/Payment");
 const Users = require("../models/Users");
 const { verifyTokenAndAuthorization } = require("./jwt");
 
+// agency edit
+router.put("/", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const client = await Agency.findOneAndUpdate(
+      { uuid: req.user.uuid },
+      { $set: req.body },
+      { new: true }
+    );
+    const user = await Users.findByIdAndUpdate(
+      req.user.id,
+      { $set: req.body },
+      { new: true }
+    );
+
+    if (user) {
+      await user.updateOne({ isUpdated: true });
+      res.status(200).json({ ...user._doc, client });
+    } else {
+      res.status(404).json("User not found!");
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
 // create a model
 router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
   // agency
@@ -35,6 +61,8 @@ router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
 
         const newModel = new Models({
           uuid: newUser._id,
+          email: newUser.email,
+          fullName: newUser.firstName + " " + newUser.lastName,
         });
         await newModel.save();
         await agency.updateOne({ $push: { models: newModel.id } });
@@ -144,7 +172,7 @@ router.get("/payment/agency", verifyTokenAndAuthorization, async (req, res) => {
 
   try {
     if (agency) {
-      const payment = await Payment.find({sender: agency.uuid})
+      const payment = await Payment.find({ sender: agency.uuid });
       res.status(200).json(payment);
     } else {
       res.status(400).json("Oops! An error occured");
