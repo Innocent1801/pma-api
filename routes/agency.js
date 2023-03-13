@@ -85,9 +85,9 @@ router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const agency = await Agency.findOne({ uuid: req.user.id });
-    const model = await Models.find({ _id: agency.models });
+    const model = await Models.find({ _id: agency?.models });
 
-    if (model && model.length > 0) {
+    if (model && model?.length > 0) {
       res.status(200).json(model);
     } else {
       res.status(404).json("Model not found!");

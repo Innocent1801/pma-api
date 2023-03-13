@@ -32,7 +32,7 @@ router.post("/post-job", verifyTokenAndAuthorization, async (req, res) => {
       }
       await newJob.save();
       res.status(200).json(newJob);
-      console.log(newJob)
+      // console.log(newJob)
     } catch (err) {
       res.status(500).json("Connection error!");
     }
