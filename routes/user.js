@@ -2,10 +2,17 @@ const router = require("express").Router();
 const Users = require("../models/Users");
 const bcrypt = require("bcrypt");
 const { verifyTokenAndAuthorization } = require("./jwt");
+const Models = require("../models/Models");
+const Agency = require("../models/Agency");
+const Client = require("../models/Client");
 
 // get all users
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   const user = await Users.find();
+  const model = await Models.find();
+  const agency = await Agency.find();
+  const client = await Client.find()
+
   try {
     if (user.length > 0) {
       res.status(200).json(user);

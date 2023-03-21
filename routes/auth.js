@@ -161,9 +161,9 @@ router.post("/create-pma/admin", verifyTokenAndAdmin, async (req, res) => {
 
 // admin login
 router.post("/login-pma/admin", async (req, res) => {
-  const user = await Admin.findOne({ email: req.body.email });
-
   try {
+    const user = await Admin.findOne({ email: req.body.email });
+
     if (user) {
       if (bcrypt.compareSync(req.body.password, user.password)) {
         const accessToken = jwt.sign(

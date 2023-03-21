@@ -6,7 +6,7 @@ const { verifyTokenAndAuthorization } = require("./jwt");
 // get all clients
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const findClients = await Client.find({ role: "client" });
+    const findClients = await Users.find({ role: "client" });
     if (findClients.length > 0) {
       res.status(200).json(findClients);
     } else {

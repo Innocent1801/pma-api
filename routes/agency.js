@@ -32,6 +32,20 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// get all agencies
+router.get("/", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const findAgency = await Users.find({ role: "agency" });
+    if (findAgency.length > 0) {
+      res.status(200).json(findAgency);
+    } else {
+      res.status(404).json("No agency at the moment");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
 // create a model
 router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
   // agency

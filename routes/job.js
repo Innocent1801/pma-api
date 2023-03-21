@@ -31,7 +31,7 @@ router.post("/post-job", verifyTokenAndAuthorization, async (req, res) => {
         await newJob.updateOne({ $push: { photos: req.body.photos } });
       }
       await newJob.save();
-      res.status(200).json(newJob);
+      res.status(200).json("Job posted successfully.");
       // console.log(newJob)
     } catch (err) {
       res.status(500).json("Connection error!");
