@@ -39,7 +39,7 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // edit
-router.put("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
+router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     if (req.body.password) {
       const salt = await bcrypt.genSalt(10);
