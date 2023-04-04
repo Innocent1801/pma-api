@@ -8,6 +8,7 @@ const UserRoute = require("./user");
 const AdminRoute = require("./admin");
 const JobRoute = require("./job");
 const BlogRoute = require("./blog");
+const NotificationRoute = require("./notification");
 
 router.use("/api/auth", authRoute);
 router.use("/api/model", modelRoute);
@@ -17,5 +18,6 @@ router.use("/api/user", UserRoute);
 router.use("/api/admin", AdminRoute);
 router.use("/api/job", JobRoute);
 router.use("/api/blog", BlogRoute);
+router.use("/api/notification", NotificationRoute);
 
 module.exports = router;
