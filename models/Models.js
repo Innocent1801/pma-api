@@ -4,6 +4,8 @@ const ModelSchema = new mongoose.Schema(
   {
     uuid: { type: String },
     fullName: { type: String },
+    isFeatured: {type: Boolean, default: true},
+    isVerified: { type: Boolean, default: false },
     agency: { type: String },
     photos: { type: Array },
     polaroids: { type: Array },

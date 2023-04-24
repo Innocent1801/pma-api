@@ -1,5 +1,4 @@
 const router = require("express").Router();
-const bcrypt = require("bcrypt");
 const Agency = require("../models/Agency");
 const Models = require("../models/Models");
 const Payment = require("../models/Payment");
@@ -48,43 +47,13 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 
 // create a model
 router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
-  // agency
-  const agency = await Agency.findOne({ uuid: req.user.id });
-
-  // encrypt password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
-  //   check if user/model exist
-  const user =
-    (await Users.findOne({ username: req.body.username })) ||
-    (await Users.findOne({ email: req.body.email }));
-
   try {
+    const agency = await Agency.findOne({ uuid: req.user.id });
     if (agency && agency.models.length < 2) {
-      if (!user) {
-        const newUser = new Users({
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          username: req.body.username,
-          email: req.body.email,
-          password: hashedPassword,
-          role: "model",
-        });
-        await newUser.save();
-
-        const newModel = new Models({
-          uuid: newUser._id,
-          email: newUser.email,
-          fullName: newUser.firstName + " " + newUser.lastName,
-        });
-        await newModel.save();
-        await agency.updateOne({ $push: { models: newModel.id } });
-
-        res.status(200).json("Registration successful!");
-      } else {
-        res.status(400).json("User already exists");
-      }
+      const newModel = new Models(req.body);
+      await newModel.save();
+      await agency.updateOne({ $push: { models: newModel.id } });
+      res.status(200).json("Registration successful!");
     } else {
       res
         .status(403)
@@ -95,13 +64,14 @@ router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
-// get all created models by an agents
-router.get("/", verifyTokenAndAuthorization, async (req, res) => {
+// get all created models by an agency
+router.get("/models/all", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const agency = await Agency.findOne({ uuid: req.user.id });
     const model = await Models.find({ _id: agency?.models });
 
     if (model && model?.length > 0) {
+      // console.log(model)
       res.status(200).json(model);
     } else {
       res.status(404).json("Model not found!");

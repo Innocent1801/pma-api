@@ -59,12 +59,12 @@ router.get("/find/models", async (req, res) => {
     const keys = ["country", "state"];
 
     const search = (data) => {
-      return data.filter((item) =>
-        keys.some((key) => item[key].toLowerCase().includes(model))
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(model))
       );
     };
 
-    const models = await Models.find();
+    const models = await Models.find({ isVerified: true });
     if (model.length > 0) {
       res.status(200).json(search(models));
     } else if (models) {
@@ -74,7 +74,7 @@ router.get("/find/models", async (req, res) => {
     }
   } catch (err) {
     res.status(500).json("Connection error!");
-    console.log(err)
+    console.log(err);
   }
 });
 
@@ -90,13 +90,17 @@ router.get("/booked-models", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // get singular model
-router.get("/:uuid", async (req, res) => {
+router.get("/:param", async (req, res) => {
   try {
-    const model = await Models.findOne({ uuid: req.params.uuid });
+    const model = await Models.findOne({
+      $or: [{ uuid: req.params.param }, { _id: req.params.param }],
+    });
     const user = await Users.findOne({ _id: model.uuid });
 
     if (user) {
       res.status(200).json({ ...user._doc, model });
+    } else if (!user) {
+      res.status(200).json({model});
     } else {
       res.status(404).json("Model not found!");
     }

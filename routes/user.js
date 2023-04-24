@@ -25,7 +25,7 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // get single user
-router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
+router.get("/:id", async (req, res) => {
   const user = await Users.findById(req.params.id);
   try {
     if (user) {
