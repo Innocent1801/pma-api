@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const Client = require("../models/Client");
 const Users = require("../models/Users");
-const { verifyTokenAndAuthorization } = require("./jwt");
+const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
 
 // get all clients
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
@@ -13,6 +13,35 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
       res.status(404).json("No model at the moment");
     }
   } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// admin get all clients
+router.get("/clients", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const findClients = await Client.find();
+    if (findClients.length > 0) {
+      res.status(200).json(findClients);
+    } else {
+      res.status(404).json("No model at the moment");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// admin get single client
+router.get("/client/:id", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const findClient = await Client.findById(req.params.id);
+    if (findClient) {
+      res.status(200).json(findClient);
+    } else {
+      res.status(404).json("No model at the moment");
+    }
+  } catch (err) {
+    console.log(err)
     res.status(500).json("Connection error!");
   }
 });

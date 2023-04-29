@@ -15,6 +15,7 @@ const ClientSchema = new mongoose.Schema(
     bio: { type: String },
     instagram: { type: String },
     jobPhotos:{type: Array},
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

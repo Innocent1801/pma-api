@@ -11,12 +11,13 @@ const AgencySchema = new mongoose.Schema(
     address: { type: String },
     followers: { type: Array },
     followings: { type: Array },
-    photo: { type: String },
+    picture: { type: String },
     coverPhoto: { type: String },
     about: { type: String },
     models: { type: Array },
     instagram: { type: String },
     jobPhotos:{type: Array},
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

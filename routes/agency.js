@@ -34,13 +34,28 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 // get all agencies
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const findAgency = await Users.find({ role: "agency" });
+    const findAgency = await Agency.find();
     if (findAgency.length > 0) {
       res.status(200).json(findAgency);
     } else {
       res.status(404).json("No agency at the moment");
     }
   } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// get single agency
+router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const findAgency = await Agency.findById(req.params.id);
+    if (findAgency) {
+      res.status(200).json(findAgency);
+    } else {
+      res.status(404).json("Not found");
+    }
+  } catch (err) {
+    console.log(err)
     res.status(500).json("Connection error!");
   }
 });
@@ -121,61 +136,6 @@ router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
         await model.updateOne({ $push: { photos: req.body.photos } });
       }
       res.status(200).json("Photo uploaded");
-    } else {
-      res.status(400).json("Oops! An error occured");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// // agency add photos to job photos
-// router.post("/add/job-photos", verifyTokenAndAuthorization, async (req, res) => {
-//   try {
-//     const agency = await Agency.findOne({ uuid: req.user.id });
-
-//     if (agency) {
-//       await agency.updateOne({ $push: { jobPhotos: req.body.jobPhotos } });
-//       res.status(200).json("Photo uploaded");
-//     } else {
-//       res.status(400).json("Oops! An error occured");
-//     }
-//   } catch (err) {
-//     console.log(err);
-//     res.status(500).json("Connection error!");
-//   }
-// });
-
-// make payment
-router.post("/payment/agency", async (req, res) => {
-  try {
-    const agency = await Agency.findOne({ uuid: req.body.uuid });
-    // console.log(agency)
-
-    if (agency) {
-      const newPayment = new Payment({
-        sender: agency.uuid,
-        amount: req.body.amount,
-        desc: "Agency subscription",
-      });
-      await newPayment.save();
-      res.status(200).json("Payment successful");
-    } else {
-      res.status(400).json("Oops! An error occured");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// get payments made
-router.get("/payment/agency", verifyTokenAndAuthorization, async (req, res) => {
-  const agency = await Agency.findOne({ uuid: req.user.uuid });
-
-  try {
-    if (agency) {
-      const payment = await Payment.find({ sender: agency.uuid });
-      res.status(200).json(payment);
     } else {
       res.status(400).json("Oops! An error occured");
     }

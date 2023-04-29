@@ -1,7 +1,6 @@
 const router = require("express").Router();
 const BookModel = require("../models/BookModel");
 const Models = require("../models/Models");
-const Payment = require("../models/Payment");
 const Post = require("../models/Post");
 const Users = require("../models/Users");
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
@@ -41,6 +40,20 @@ router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const findModels = await Users.find({ role: "model" });
+    if (findModels.length > 0) {
+      res.status(200).json(findModels);
+    } else {
+      res.status(404).json("No model at the moment");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// admin get all model
+router.get("/models", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const findModels = await Models.find();
     if (findModels.length > 0) {
       res.status(200).json(findModels);
     } else {
@@ -100,7 +113,20 @@ router.get("/:param", async (req, res) => {
     if (user) {
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
-      res.status(200).json({model});
+      res.status(200).json({ model });
+    } else {
+      res.status(404).json("Model not found!");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+// get singular model
+router.get("/model/:id", async (req, res) => {
+  try {
+    const model = await Models.findById(req.params.id);
+    if (model) {
+      res.status(200).json(model);
     } else {
       res.status(404).json("Model not found!");
     }
@@ -135,6 +161,38 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// model activate feature
+router.put("/feature/:id", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const model = await Models.findById(req.params.id);
+    if (model) {
+      await model.updateOne({ $set: { isFeatured: true } });
+      res.status(200).json(model);
+    } else {
+      res.status(404).json("User not found!");
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
+// model deactivate feature
+router.put("/unfeature/:id", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const model = await Models.findById(req.params.id);
+    if (model) {
+      await model.updateOne({ $set: { isFeatured: false } });
+      res.status(200).json(model);
+    } else {
+      res.status(404).json("User not found!");
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
 // model add photos to portfolio
 router.post("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   const model = await Models.findOne({ uuid: req.user.uuid });
@@ -149,124 +207,6 @@ router.post("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
       res.status(200).json("Photo uploaded");
     } else {
       res.status(400).json("Oops! An error occured");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// make payment
-router.post("/payment/model", async (req, res) => {
-  try {
-    const model = await Models.findOne({ uuid: req.body.uuid });
-
-    // if (model) {
-    const newPayment = new Payment({
-      sender: req.body.userId,
-      amount: req.body.amount,
-      desc: "Subscription",
-    });
-    await newPayment.save();
-    res.status(200).json("Payment successful");
-    // } else {
-    //   res.status(400).json("Oops! An error occured");
-    // }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// get payments made
-router.get("/payment/model", verifyTokenAndAuthorization, async (req, res) => {
-  const model = await Models.findOne({ uuid: req.user.uuid });
-
-  try {
-    if (model) {
-      const payment = await Payment.find({ sender: model.uuid });
-      res.status(200).json(payment);
-    } else {
-      res.status(400).json("Oops! An error occured");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// TODO: community post
-// make a new post
-router.post("/new/post", verifyTokenAndAuthorization, async (req, res) => {
-  const user = await Users.findById(req.user.id);
-
-  if (user.role === "model") {
-    try {
-      const newPost = new Post({
-        postBy: user.id,
-        title: req.body.title,
-        text: req.body.text,
-        photo: req.body.photo,
-      });
-
-      await newPost.save();
-      res.status(200).json(newPost);
-    } catch (err) {
-      res.status(500).json("Connection error!");
-    }
-  } else {
-    res.status(400).json("Oops! An error occured");
-  }
-});
-
-// get all posts posted
-router.get("/posts/all", verifyTokenAndAuthorization, async (req, res) => {
-  const posts = await Post.find();
-  try {
-    if (posts.length > 0) {
-      res.status(200).json(posts);
-    } else {
-      res.status(400).json("No posts found!");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// get posts posted
-router.get("/posts/posted", verifyTokenAndAuthorization, async (req, res) => {
-  const user = await Users.findById(req.user.id);
-  const posts = await Post.find({ postBy: user.id });
-  try {
-    if (posts.length > 0) {
-      res.status(200).json(posts);
-    } else {
-      res.status(400).json("No posts found!");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// get a single post
-router.get("/post/:id", verifyTokenAndAuthorization, async (req, res) => {
-  const post = await Post.findById(req.params.id);
-  try {
-    if (post) {
-      res.status(200).json(post);
-    } else {
-      res.status(404).json("Post not found!");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
-// delete a post by the admin
-router.delete("/post/:id", verifyTokenAndAdmin, async (req, res) => {
-  try {
-    const post = await Post.findByIdAndDelete(req.params.id);
-    if (post) {
-      res.status(200).json("Post deleted successfully");
-    } else {
-      res.status(404).json("Not found, job might have been recently deleted!");
     }
   } catch (err) {
     res.status(500).json("Connection error!");
