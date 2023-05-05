@@ -10,6 +10,8 @@ const JobRoute = require("./job");
 const BlogRoute = require("./blog");
 const NotificationRoute = require("./notification");
 const PaymentRoute = require("./payment");
+const ConversationRoute = require("./conversation");
+const BookModelRoute = require("./bookModel");
 
 router.use("/api/auth", authRoute);
 router.use("/api/model", modelRoute);
@@ -21,5 +23,7 @@ router.use("/api/job", JobRoute);
 router.use("/api/blog", BlogRoute);
 router.use("/api/notification", NotificationRoute);
 router.use("/api/payment", PaymentRoute);
+router.use("/api/conversation", ConversationRoute);
+router.use("/api/book", BookModelRoute);
 
 module.exports = router;

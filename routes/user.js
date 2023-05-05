@@ -8,12 +8,8 @@ const Client = require("../models/Client");
 
 // get all users
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
-  const user = await Users.find();
-  const model = await Models.find();
-  const agency = await Agency.find();
-  const client = await Client.find();
-
   try {
+    const user = await Users.find();
     if (user.length > 0) {
       res.status(200).json(user);
     } else {
@@ -26,8 +22,8 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 
 // get single user
 router.get("/:id", async (req, res) => {
-  const user = await Users.findById(req.params.id);
   try {
+    const user = await Users.findById(req.params.id);
     if (user) {
       res.status(200).json(user);
     } else {

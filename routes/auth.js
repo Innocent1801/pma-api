@@ -22,7 +22,6 @@ router.post("/register", async (req, res) => {
       const newUser = new Users({
         firstName: req.body.firstName,
         lastName: req.body.lastName,
-        // username: req.body.username,
         email: req.body.email,
         password: hashedPassword,
         role: req.body.role,
@@ -76,7 +75,19 @@ router.post("/register", async (req, res) => {
           await newUser.save();
           break;
       }
-      res.status(200).json({ ...others, accessToken });
+      if (newUser.role === "client") {
+        res
+          .status(200)
+          .json("Registration successful! Please proceed to login");
+      } else {
+        res
+          .status(200)
+          .json({
+            message:
+              "Registration successful! Please proceed to make your subscription payment",
+            accessToken,
+          });
+      }
     } else {
       res.status(400).json("User already exists!");
     }
@@ -110,11 +121,29 @@ router.post("/login", async (req, res) => {
         const { password, ...others } = user._doc;
         switch (user.role) {
           case "agency":
-            res.status(200).json({ ...others, agency, accessToken });
+            if (user.isSubscribed) {
+              res.status(200).json({ ...others, agency, accessToken });
+            } else {
+              res.status(403).json({
+                message:
+                  "Please proceed to make your subscription payment before you can login",
+                accessToken,
+                userRole: user.role,
+              });
+            }
             break;
 
           case "model":
-            res.status(200).json({ ...others, model, accessToken });
+            if (user.isSubscribed) {
+              res.status(200).json({ ...others, model, accessToken });
+            } else {
+              res.status(403).json({
+                message:
+                  "Please proceed to make your subscription payment before you can login",
+                accessToken,
+                userRole: user.role,
+              });
+            }
             break;
 
           default:

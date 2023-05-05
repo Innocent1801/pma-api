@@ -64,9 +64,10 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const agency = await Agency.findOne({ uuid: req.user.id });
-    if (agency && agency.models.length < 2) {
+    if (agency && agency.models.length < 5) {
       const newModel = new Models(req.body);
       await newModel.save();
+      await newModel.updateOne({$set: {uuid: agency.uuid}})
       await agency.updateOne({ $push: { models: newModel.id } });
       res.status(200).json("Registration successful!");
     } else {

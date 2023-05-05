@@ -19,6 +19,7 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
           user.role === "model" ? "Model Subscription" : "Agency Subscription",
       });
       await newPayment.save();
+      await user.updateOne({ $set: { isSubscribed: true } });
       res.status(200).json("Payment successful");
     } else {
       res.status(400).json("Oops! An error occured");

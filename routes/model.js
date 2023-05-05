@@ -1,40 +1,9 @@
 const router = require("express").Router();
 const BookModel = require("../models/BookModel");
 const Models = require("../models/Models");
-const Post = require("../models/Post");
 const Users = require("../models/Users");
+const notification = require("../services/notifications");
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
-
-// book model
-router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
-  const user = await Users.findById(req.user.id);
-  const model = await Models.findOne({ uuid: req.params.uuid });
-  try {
-    if (user && user.isVerified) {
-      if (model) {
-        const bookModel = new BookModel({
-          name: req.body.name,
-          country: req.body.country,
-          state: req.body.state,
-          from: req.body.from,
-          to: req.body.to,
-          price: req.body.price,
-          jobDescription: req.body.jobDescription,
-          modelId: model.uuid,
-          clientId: user._id,
-        });
-        await bookModel.save();
-        res.status(200).json("Model booked");
-      } else {
-        res.status(400).json("An error occured");
-      }
-    } else {
-      res.status(400).json("User needs to be verified before proceeding");
-    }
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
 
 // get all model
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
@@ -91,28 +60,30 @@ router.get("/find/models", async (req, res) => {
   }
 });
 
-// get all booked model
-router.get("/booked-models", verifyTokenAndAuthorization, async (req, res) => {
-  const bookedModel = await BookModel.find();
-  // const model = await Models.find({ _id: bookedModel.modelId });
-  try {
-    res.status(200).json(bookedModel);
-  } catch (err) {
-    res.status(500).json("Connection error!");
-  }
-});
-
 // get singular model
-router.get("/:param", async (req, res) => {
+router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    const loggedUser = req.user;
     const model = await Models.findOne({
       $or: [{ uuid: req.params.param }, { _id: req.params.param }],
     });
     const user = await Users.findOne({ _id: model.uuid });
 
     if (user) {
+      await model.updateOne({ $set: { visitors: visitors + 1 } });
+      await notification.sendNotification({
+        notification: {},
+        notTitle: loggedUser.email + " viewed your portfolio.",
+        notId: model.uuid,
+      });
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
+      await model.updateOne({ $set: { visitors: visitors + 1 } });
+      await notification.sendNotification({
+        notification: {},
+        notTitle: loggedUser.email + " viewed your portfolio.",
+        notId: model.uuid,
+      });
       res.status(200).json({ model });
     } else {
       res.status(404).json("Model not found!");

@@ -45,6 +45,11 @@ const ModelSchema = new mongoose.Schema(
     total: { type: Number, default: 0 },
     pending: { type: Number, default: 0 },
     withdrawn: { type: Number, default: 0 },
+    minPrice: { type: Number, default: 0 },
+    maxPrice: { type: Number, default: 0 },
+    visitors: { type: Number, default: 0 },
+    acceptedJobs: { type: Array },
+    rejectedJobs: { type: Array },
   },
   { timestamps: true }
 );

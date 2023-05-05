@@ -12,6 +12,8 @@ const BookModelSchema = new mongoose.Schema(
     modelId: { type: String },
     clientId: { type: String },
     isAccepted: { type: Boolean, default: false },
+    isRejected: { type: Boolean, default: false },
+    isJobDone: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
