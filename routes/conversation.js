@@ -1,12 +1,15 @@
 const router = require("express").Router();
+const { sendMesageNotification } = require("../config/messageNotification.config");
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
+const Users = require("../models/Users");
 const { verifyTokenAndAuthorization } = require("./jwt");
 
 // send message
 router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
+    const sender = await Users.findById(user.id);
     const findConversation = await Conversation.findById(req.params.id);
     if (findConversation) {
       if (
@@ -39,6 +42,13 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
         }
         await newMessage.save();
         res.status(200).json(newMessage);
+        if(findConversation.sender === user.id ){
+          const receiver = await Users.findById(findConversation.receiver)
+          sendMesageNotification((messageSender = sender.firstName, messageReceiver = receiver.email))
+        }else if(findConversation.receiver === user.id ){
+          const receiver = await Users.findById(findConversation.sender)
+          sendMesageNotification((messageSender = sender.firstName, messageReceiver = receiver.email))
+        }
       } else {
         res.status(403).json("You do not have permission to send this message");
       }

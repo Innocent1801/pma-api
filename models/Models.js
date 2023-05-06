@@ -3,8 +3,9 @@ const mongoose = require("mongoose");
 const ModelSchema = new mongoose.Schema(
   {
     uuid: { type: String },
+    email: { type: String },
     fullName: { type: String },
-    isFeatured: {type: Boolean, default: true},
+    isFeatured: { type: Boolean, default: true },
     isVerified: { type: Boolean, default: false },
     agency: { type: String },
     photos: { type: Array },

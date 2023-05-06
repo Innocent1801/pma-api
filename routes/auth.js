@@ -7,6 +7,7 @@ const Models = require("../models/Models");
 const Admin = require("../models/Admin");
 const { verifyTokenAndAdmin } = require("./jwt");
 const Client = require("../models/Client");
+const { sendConfirmationEmail } = require("../config/nodemailer.config");
 
 // registration
 router.post("/register", async (req, res) => {
@@ -79,14 +80,13 @@ router.post("/register", async (req, res) => {
         res
           .status(200)
           .json("Registration successful! Please proceed to login");
+        sendConfirmationEmail((email = newUser.email));
       } else {
-        res
-          .status(200)
-          .json({
-            message:
-              "Registration successful! Please proceed to make your subscription payment",
-            accessToken,
-          });
+        res.status(200).json({
+          message:
+            "Registration successful! Please proceed to make your subscription payment",
+          accessToken,
+        });
       }
     } else {
       res.status(400).json("User already exists!");

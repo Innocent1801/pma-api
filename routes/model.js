@@ -121,7 +121,7 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
     );
 
     if (user) {
-      await user.updateOne({ isUpdated: true });
+      await user.updateOne({ $set: { isUpdated: true } });
       res.status(200).json({ ...user._doc, model });
     } else {
       res.status(404).json("User not found!");
@@ -165,10 +165,9 @@ router.put("/unfeature/:id", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // model add photos to portfolio
-router.post("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
-  const model = await Models.findOne({ uuid: req.user.uuid });
-
+router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    const model = await Models.findOne({ uuid: req.user.uuid });
     if (model) {
       if (req.body.videos) {
         await model.updateOne({ $push: { videos: req.body.videos } });

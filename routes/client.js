@@ -61,8 +61,24 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
     );
 
     if (user) {
-      await user.updateOne({ isUpdated: true });
+      await user.updateOne({ $set: {isUpdated: true}  });
       res.status(200).json({ ...user._doc, client });
+    } else {
+      res.status(404).json("User not found!");
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
+// client job photos
+router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const user = Client.findOne({uuid: req.user.id})
+    if (user) {
+      await user.updateOne({ $push: {jobPhotos: req.body.jobPhotos}  });
+      res.status(200).json("Upload successful");
     } else {
       res.status(404).json("User not found!");
     }

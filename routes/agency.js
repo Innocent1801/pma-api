@@ -20,7 +20,7 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
     );
 
     if (user) {
-      await user.updateOne({ isUpdated: true });
+      await user.updateOne({ $set: { isUpdated: true } });
       res.status(200).json({ ...user._doc, agency });
     } else {
       res.status(404).json("User not found!");
@@ -55,7 +55,7 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
       res.status(404).json("Not found");
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -67,7 +67,7 @@ router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
     if (agency && agency.models.length < 5) {
       const newModel = new Models(req.body);
       await newModel.save();
-      await newModel.updateOne({$set: {uuid: agency.uuid}})
+      await newModel.updateOne({ $set: { uuid: agency.uuid } });
       await agency.updateOne({ $push: { models: newModel.id } });
       res.status(200).json("Registration successful!");
     } else {
@@ -115,6 +115,23 @@ router.put("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
 
     if (agency && agency.models.includes(model._id)) {
       res.status(200).json({ ...user._doc, model });
+    } else {
+      res.status(400).json("Oops! An error occured");
+    }
+  } catch (err) {
+    // console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
+// agency add photo to job photos
+router.put("/add_job_photo/:uuid", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const agency = await Agency.findOne({ uuid: req.user.uuid });
+
+    if (agency) {
+      await agency.updateOne({$push: {jobPhotos: req.body.jobPhotos}})
+      res.status(200).json("Upload successful");
     } else {
       res.status(400).json("Oops! An error occured");
     }

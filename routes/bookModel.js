@@ -7,6 +7,9 @@ const Models = require("../models/Models");
 const Agency = require("../models/Agency");
 const { verifyTokenAndAuthorization } = require("./jwt");
 const BookModel = require("../models/BookModel");
+const { sendBooking } = require("../config/booking.config");
+const { sendAccept } = require("../config/accept.config");
+const { sendReject } = require("../config/reject.config");
 
 // book model
 router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
@@ -51,6 +54,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
               $set: { locked: client.locked + bookModel.price },
             });
             res.status(200).json("Model booked");
+            sendBooking((modelName = model.fullName, clientName = client.email, email = model.email))
           } else {
             res
               .status(403)
@@ -112,6 +116,7 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
             .json(
               "Request accepted! You both can now start a conversation. Go to conversation page to start a conversation"
             );
+            sendAccept((modelName = findModel.fullName, clientName = findClient.email))
         } else {
           res
             .status(400)
@@ -160,6 +165,7 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
             notId: findClient.uuid,
           });
           res.status(200).json("Request declined!");
+          sendReject((modelName = findModel.fullName, clientName = findClient.email))
         } else {
           res
             .status(400)

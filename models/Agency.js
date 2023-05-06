@@ -4,6 +4,7 @@ const AgencySchema = new mongoose.Schema(
   {
     uuid: { type: String },
     fullName: { type: String },
+    email: { type: String },
     agencyName: { type: String },
     agencyUrl: { type: String },
     country: { type: String },
