@@ -47,7 +47,7 @@ router.get("/find/models", async (req, res) => {
     };
 
     const models = await Models.find({ isVerified: true });
-    if (model.length > 0) {
+    if (model) {
       res.status(200).json(search(models));
     } else if (models) {
       res.status(200).json(models);
