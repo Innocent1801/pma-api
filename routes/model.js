@@ -5,12 +5,51 @@ const Users = require("../models/Users");
 const notification = require("../services/notifications");
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
 
+// get model's visitors stat
+router.get("/stats", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const user = await Models.findOne({ uuid: req.user.id });
+    const date = new Date();
+    const lastYear = new Date(date.setFullYear(date.getFullYear() - 1));
+
+    const data = await Models.aggregate([
+      { $match: { createdAt: { $gte: lastYear } } },
+      {
+        $project: {
+          visitors: 1,
+          month: { $month: "$createdAt" },
+        },
+      },
+      {
+        $group: {
+          _id: { userId: user.uuid, month: "$month" },
+          visitors: { $sum: "$visitors" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: "$_id.userId",
+          month: "$_id.month",
+          visitors: 1,
+        },
+      },
+    ]);
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
 // get all model
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const findModels = await Users.find({ role: "model" });
+    const findModels = await Users.find({ isUpdated: true });
+    const users = findModels.map((item)=> item.id)
+    const user = await Models.find({uuid: {$in: users}})
     if (findModels.length > 0) {
-      res.status(200).json(findModels);
+      res.status(200).json(user);
     } else {
       res.status(404).json("No model at the moment");
     }
@@ -46,7 +85,9 @@ router.get("/find/models", async (req, res) => {
       );
     };
 
-    const models = await Models.find({ isVerified: true });
+    const user = await Users.find({ isUpdated: true });
+    const userIds = user.map((item) => item.id);
+    const models = await Models.find({ uuid: { $in: userIds } });
     if (model) {
       res.status(200).json(search(models));
     } else if (models) {
@@ -70,7 +111,7 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
     const user = await Users.findOne({ _id: model.uuid });
 
     if (user) {
-      await model.updateOne({ $set: { visitors: visitors + 1 } });
+      await model.updateOne({ $set: { visitors: model.visitors + 1 } });
       await notification.sendNotification({
         notification: {},
         notTitle: loggedUser.email + " viewed your portfolio.",

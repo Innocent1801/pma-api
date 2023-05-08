@@ -237,6 +237,27 @@ router.get("/booking/:id", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// get a model bookings
+router.get("/model-booking/:param", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const user = req.user;
+    if (user) {
+      const findBookModel = await BookModel.find({$or: [{modelId: req.params.param}, {clientId: req.params.param}] });
+      if (findBookModel) {
+        res.status(200).json(findBookModel);
+      } else {
+        res.status(404).json("Booking not found!");
+      }
+    } else {
+      res
+        .status(403)
+        .json("You do not have permission to perform this action.");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
 // get all booking information
 router.get("/bookings", verifyTokenAndAuthorization, async (req, res) => {
   try {

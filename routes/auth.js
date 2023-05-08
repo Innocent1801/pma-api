@@ -87,6 +87,7 @@ router.post("/register", async (req, res) => {
             "Registration successful! Please proceed to make your subscription payment",
           accessToken,
         });
+        sendConfirmationEmail((email = newUser.email));
       }
     } else {
       res.status(400).json("User already exists!");
