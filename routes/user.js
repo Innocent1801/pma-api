@@ -9,23 +9,45 @@ const Client = require("../models/Client");
 // get all users
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const user = await Users.find();
-    if (user.length > 0) {
-      res.status(200).json(user);
+    // filter users
+    const { user } = req.query;
+    const keys = ["email"];
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(user))
+      );
+    };
+
+    const users = await Users.find();
+    if (user) {
+      res.status(200).json(search(users));
+    } else if (users) {
+      res.status(200).json(users);
     } else {
       res.status(404).json("No user found!");
     }
   } catch (err) {
+    console.log(err)
     res.status(500).json("Connection error!");
   }
 });
 
 // get single user
-router.get("/:id", async (req, res) => {
+router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = await Users.findById(req.params.id);
     if (user) {
-      res.status(200).json(user);
+      if (user.role === "model") {
+        const model = await Models.findOne({ uuid: req.params.id });
+        res.status(200).json({ ...user._doc, model });
+      } else if (user.role === "agency") {
+        const agency = await Agency.findOne({ uuid: req.params.id });
+        res.status(200).json({ ...user._doc, agency });
+      } else if (user.role === "client") {
+        const client = await Client.findOne({ uuid: req.params.id });
+        res.status(200).json({ ...user._doc, client });
+      }
     } else {
       res.status(404).json("User not found!");
     }

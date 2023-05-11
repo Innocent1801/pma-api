@@ -20,8 +20,20 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 // admin get all clients
 router.get("/clients", verifyTokenAndAdmin, async (req, res) => {
   try {
+    // filter client
+    const { client } = req.query;
+    const keys = ["email"];
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(client))
+      );
+    };
+
     const findClients = await Client.find();
-    if (findClients.length > 0) {
+    if (client) {
+      res.status(200).json(search(findClients));
+    } else if (findClients.length > 0) {
       res.status(200).json(findClients);
     } else {
       res.status(404).json("No model at the moment");
@@ -41,7 +53,7 @@ router.get("/client/:id", verifyTokenAndAdmin, async (req, res) => {
       res.status(404).json("No model at the moment");
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -61,7 +73,7 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
     );
 
     if (user) {
-      await user.updateOne({ $set: {isUpdated: true}  });
+      await user.updateOne({ $set: { isUpdated: true } });
       res.status(200).json({ ...user._doc, client });
     } else {
       res.status(404).json("User not found!");
@@ -75,9 +87,9 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 // client job photos
 router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const user = Client.findOne({uuid: req.user.id})
+    const user = Client.findOne({ uuid: req.user.id });
     if (user) {
-      await user.updateOne({ $push: {jobPhotos: req.body.jobPhotos}  });
+      await user.updateOne({ $push: { jobPhotos: req.body.jobPhotos } });
       res.status(200).json("Upload successful");
     } else {
       res.status(404).json("User not found!");

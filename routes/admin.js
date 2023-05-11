@@ -7,6 +7,7 @@ const { verifyTokenAndAdmin } = require("./jwt");
 const Client = require("../models/Client");
 const Models = require("../models/Models");
 const Agency = require("../models/Agency");
+const { sendConfirmationEmail } = require("../config/nodemailer.config");
 
 // edit
 router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
@@ -40,7 +41,7 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
 
     if (!findUser) {
       const newUser = new Users({
-        isVerified: true,
+        isSubscribed: true,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         email: req.body.email,
@@ -51,13 +52,11 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
       });
       await newUser.save();
 
-  
       const { password, ...others } = newUser._doc;
 
       switch (newUser.role) {
         case "agency":
           const newAgency = new Agency({
-            isVerified: true,
             uuid: newUser._id,
             email: newUser.email,
             fullName: newUser.firstName + " " + newUser.lastName,
@@ -67,7 +66,6 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
 
         case "model":
           const newModel = new Models({
-            isVerified: true,
             uuid: newUser._id,
             email: newUser.email,
             fullName: newUser.firstName + " " + newUser.lastName,
@@ -77,7 +75,6 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
 
         case "client":
           const newClient = new Client({
-            isVerified: true,
             uuid: newUser._id,
             email: newUser.email,
           });
@@ -89,30 +86,59 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
           break;
       }
       res.status(200).json({ ...others });
+      sendConfirmationEmail((email = newUser.email));
     } else {
       res.status(400).json("User already exists!");
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
 
 // edit a user
 router.put("/:id/edit-user", verifyTokenAndAdmin, async (req, res) => {
-  if (req.body.password) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    req.body.password = hashedPassword;
-  }
-
   try {
+    if (req.body.password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(req.body.password, salt);
+      req.body.password = hashedPassword;
+    }
+
     const user = await Users.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
       { new: true }
     );
-    res.status(200).json(user);
+    if (user.role === "model") {
+      const model = await Models.findOneAndUpdate(
+        { uuid: user._id },
+        { $set: req.body },
+        { new: true }
+      );
+      await model.updateOne({
+        $set: { fullName: user.firstName + " " + user.lastName },
+      });
+      await model.updateOne({ $set: { email: user.email } });
+    } else if (user.role === "agency") {
+      const agency = await Agency.findOneAndUpdate(
+        { uuid: user._id },
+        { $set: req.body },
+        { new: true }
+      );
+      await agency.updateOne({
+        $set: { fullName: user.firstName + " " + user.lastName },
+      });
+      await agency.updateOne({ $set: { email: user.email } });
+    } else if (user.role === "client") {
+      const client = await Client.findOneAndUpdate(
+        { uuid: user._id },
+        { $set: req.body },
+        { new: true }
+      );
+      await client.updateOne({ $set: { email: user.email } });
+    }
+    res.status(200).json("Data uploaded successfully!");
   } catch (err) {
     res.status(500).json("Connection error!");
   }
@@ -151,7 +177,7 @@ router.get("/payment/:id", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/agency/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Agency.findById(req.params.id);
-     if (user) {
+    if (user) {
       await user.delete();
       await Users.findOneAndDelete({ _id: user.uuid });
       res.status(200).json("User deleted!");
@@ -167,7 +193,7 @@ router.delete("/agency/:id", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/model/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Models.findById(req.params.id);
-     if (user) {
+    if (user) {
       await user.delete();
       await Users.findOneAndDelete({ _id: user.uuid });
       res.status(200).json("User deleted!");
@@ -183,7 +209,7 @@ router.delete("/model/:id", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/client/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Client.findById(req.params.id);
-     if (user) {
+    if (user) {
       await user.delete();
       await Users.findOneAndDelete({ _id: user.uuid });
       res.status(200).json("User deleted!");

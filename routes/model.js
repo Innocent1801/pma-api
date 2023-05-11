@@ -46,8 +46,8 @@ router.get("/stats", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const findModels = await Users.find({ isUpdated: true });
-    const users = findModels.map((item)=> item.id)
-    const user = await Models.find({uuid: {$in: users}})
+    const users = findModels.map((item) => item.id);
+    const user = await Models.find({ uuid: { $in: users } });
     if (findModels.length > 0) {
       res.status(200).json(user);
     } else {
@@ -61,8 +61,20 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 // admin get all model
 router.get("/models", verifyTokenAndAdmin, async (req, res) => {
   try {
+    // filter models
+    const { model } = req.query;
+    const keys = ["fullName", "email"];
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(model))
+      );
+    };
+
     const findModels = await Models.find();
-    if (findModels.length > 0) {
+    if (model) {
+      res.status(200).json(search(findModels));
+    } else if (findModels) {
       res.status(200).json(findModels);
     } else {
       res.status(404).json("No model at the moment");

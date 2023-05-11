@@ -34,8 +34,20 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 // get all agencies
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    // filter agency
+    const { agency } = req.query;
+    const keys = ["fullName", "email"];
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(agency))
+      );
+    };
+
     const findAgency = await Agency.find();
-    if (findAgency.length > 0) {
+    if (agency) {
+      res.status(200).json(search(findAgency));
+    } else if (findAgency) {
       res.status(200).json(findAgency);
     } else {
       res.status(404).json("No agency at the moment");
@@ -125,21 +137,25 @@ router.put("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // agency add photo to job photos
-router.put("/add_job_photo/:uuid", verifyTokenAndAuthorization, async (req, res) => {
-  try {
-    const agency = await Agency.findOne({ uuid: req.user.uuid });
+router.put(
+  "/add_job_photo/:uuid",
+  verifyTokenAndAuthorization,
+  async (req, res) => {
+    try {
+      const agency = await Agency.findOne({ uuid: req.user.uuid });
 
-    if (agency) {
-      await agency.updateOne({$push: {jobPhotos: req.body.jobPhotos}})
-      res.status(200).json("Upload successful");
-    } else {
-      res.status(400).json("Oops! An error occured");
+      if (agency) {
+        await agency.updateOne({ $push: { jobPhotos: req.body.jobPhotos } });
+        res.status(200).json("Upload successful");
+      } else {
+        res.status(400).json("Oops! An error occured");
+      }
+    } catch (err) {
+      // console.log(err);
+      res.status(500).json("Connection error!");
     }
-  } catch (err) {
-    // console.log(err);
-    res.status(500).json("Connection error!");
   }
-});
+);
 
 // agency add photos to model portfolio
 router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
