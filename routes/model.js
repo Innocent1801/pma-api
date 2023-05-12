@@ -116,25 +116,35 @@ router.get("/find/models", async (req, res) => {
 // get singular model
 router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const loggedUser = req.user;
+    const loggedUser = await Users.findById(req.user.id);
     const model = await Models.findOne({
       $or: [{ uuid: req.params.param }, { _id: req.params.param }],
     });
     const user = await Users.findOne({ _id: model.uuid });
 
     if (user) {
-      await model.updateOne({ $set: { visitors: model.visitors + 1 } });
-      await notification.sendNotification({
-        notification: {},
-        notTitle: loggedUser.email + " viewed your portfolio.",
-        notId: model.uuid,
-      });
+      if (user.id !== req.user.id) {
+        await model.updateOne({ $set: { visitors: model.visitors + 1 } });
+        await notification.sendNotification({
+          notification: {},
+          notTitle:
+            loggedUser.firstName +
+            " " +
+            loggedUser.lastName +
+            " viewed your portfolio.",
+          notId: model.uuid,
+        });
+      }
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
       await model.updateOne({ $set: { visitors: visitors + 1 } });
       await notification.sendNotification({
         notification: {},
-        notTitle: loggedUser.email + " viewed your portfolio.",
+        notTitle:
+          loggedUser.firstName +
+          " " +
+          loggedUser.lastName +
+          " viewed your portfolio.",
         notId: model.uuid,
       });
       res.status(200).json({ model });
@@ -145,12 +155,30 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
     res.status(500).json("Connection error!");
   }
 });
-// get singular model
-router.get("/model/:id", async (req, res) => {
+
+// get singular model without authentication
+router.get("/model/:param", async (req, res) => {
   try {
-    const model = await Models.findById(req.params.id);
-    if (model) {
-      res.status(200).json(model);
+    const model = await Models.findOne({
+      $or: [{ uuid: req.params.param }, { _id: req.params.param }],
+    });
+    const user = await Users.findOne({ _id: model.uuid });
+    if (user) {
+      await model.updateOne({ $set: { visitors: model.visitors + 1 } });
+      await notification.sendNotification({
+        notification: {},
+        notTitle: "Someone viewed your portfolio.",
+        notId: model.uuid,
+      });
+      res.status(200).json({ ...user._doc, model });
+    } else if (!user) {
+      await model.updateOne({ $set: { visitors: visitors + 1 } });
+      await notification.sendNotification({
+        notification: {},
+        notTitle: "Someone viewed your portfolio.",
+        notId: model.uuid,
+      });
+      res.status(200).json({ model });
     } else {
       res.status(404).json("Model not found!");
     }
@@ -222,16 +250,47 @@ router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const model = await Models.findOne({ uuid: req.user.uuid });
     if (model) {
+      if (req.body.photos) {
+        await model.updateOne({
+          $push: { photos: { $each: req.body.photos } },
+        });
+      }
+      if (req.body.polaroids) {
+        await model.updateOne({
+          $push: { polaroids: { $each: req.body.polaroids } },
+        });
+      }
       if (req.body.videos) {
-        await model.updateOne({ $push: { videos: req.body.videos } });
-      } else {
-        await model.updateOne({ $push: { photos: req.body.photos } });
+        await model.updateOne({
+          $push: { videos: { $each: req.body.videos } },
+        });
       }
       res.status(200).json("Photo uploaded");
     } else {
       res.status(400).json("Oops! An error occured");
     }
   } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
+// model remove photos from portfolio
+router.put("/remove/photo", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const model = await Models.findOne({ uuid: req.user.uuid });
+    if (model) {
+      if (req.body.photo) {
+        await model.updateOne({ $pull: { photos: req.body.photo } });
+        await model.updateOne({ $pull: { polaroids: req.body.photo } });
+        await model.updateOne({ $pull: { videos: req.body.photo } });
+      }
+      res.status(200).json("Photo deleted!");
+    } else {
+      res.status(400).json("Oops! An error occured");
+    }
+  } catch (err) {
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });

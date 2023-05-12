@@ -145,7 +145,9 @@ router.put(
       const agency = await Agency.findOne({ uuid: req.user.uuid });
 
       if (agency) {
-        await agency.updateOne({ $push: { jobPhotos: req.body.jobPhotos } });
+        await agency.updateOne({
+          $push: { jobPhotos: { $each: req.body.jobPhotos } },
+        });
         res.status(200).json("Upload successful");
       } else {
         res.status(400).json("Oops! An error occured");
@@ -165,9 +167,13 @@ router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
   try {
     if (agency && agency.models.includes(model._id)) {
       if (req.body.videos) {
-        await model.updateOne({ $push: { videos: req.body.photos } });
+        await model.updateOne({
+          $push: { videos: { $each: req.body.photos } },
+        });
       } else {
-        await model.updateOne({ $push: { photos: req.body.photos } });
+        await model.updateOne({
+          $push: { photos: { $each: req.body.photos } },
+        });
       }
       res.status(200).json("Photo uploaded");
     } else {

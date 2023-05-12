@@ -89,7 +89,9 @@ router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = Client.findOne({ uuid: req.user.id });
     if (user) {
-      await user.updateOne({ $push: { jobPhotos: req.body.jobPhotos } });
+      await user.updateOne({
+        $push: { jobPhotos: { $each: req.body.jobPhotos } },
+      });
       res.status(200).json("Upload successful");
     } else {
       res.status(404).json("User not found!");
