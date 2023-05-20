@@ -49,12 +49,17 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
               notification: bookModel,
               notTitle: bookModel.name + " requested for your service",
               notId: model.uuid,
+              notFrom: user.id,
             });
             await client.updateOne({
               $set: { locked: client.locked + bookModel.price },
             });
             res.status(200).json("Model booked");
-            sendBooking((modelName = model.fullName, clientName = client.email, email = model.email))
+            sendBooking(
+              ((modelName = model.fullName),
+              (clientName = client.email),
+              (email = model.email))
+            );
           } else {
             res
               .status(403)
@@ -107,6 +112,7 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
               findModel.fullName +
               " accepted your request for their service, you both can now start a conversation. Go to conversation page to start a conversation",
             notId: findClient.uuid,
+            notFrom: user.id,
           });
           await findModel.updateOne({
             $push: { acceptedJobs: findBookModel.id },
@@ -116,7 +122,9 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
             .json(
               "Request accepted! You both can now start a conversation. Go to conversation page to start a conversation"
             );
-            sendAccept((modelName = findModel.fullName, clientName = findClient.email))
+          sendAccept(
+            ((modelName = findModel.fullName), (clientName = findClient.email))
+          );
         } else {
           res
             .status(400)
@@ -163,9 +171,12 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
               findModel.fullName +
               " declined your request for their service, you can go ahead to book another model.",
             notId: findClient.uuid,
+            notFrom: user.id
           });
           res.status(200).json("Request declined!");
-          sendReject((modelName = findModel.fullName, clientName = findClient.email))
+          sendReject(
+            ((modelName = findModel.fullName), (clientName = findClient.email))
+          );
         } else {
           res
             .status(400)
@@ -238,25 +249,31 @@ router.get("/booking/:id", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // get a model bookings
-router.get("/model-booking/:param", verifyTokenAndAuthorization, async (req, res) => {
-  try {
-    const user = req.user;
-    if (user) {
-      const findBookModel = await BookModel.find({$or: [{modelId: req.params.param}, {clientId: req.params.param}] });
-      if (findBookModel) {
-        res.status(200).json(findBookModel);
+router.get(
+  "/model-booking/:param",
+  verifyTokenAndAuthorization,
+  async (req, res) => {
+    try {
+      const user = req.user;
+      if (user) {
+        const findBookModel = await BookModel.find({
+          $or: [{ modelId: req.params.param }, { clientId: req.params.param }],
+        });
+        if (findBookModel) {
+          res.status(200).json(findBookModel);
+        } else {
+          res.status(404).json("Booking not found!");
+        }
       } else {
-        res.status(404).json("Booking not found!");
+        res
+          .status(403)
+          .json("You do not have permission to perform this action.");
       }
-    } else {
-      res
-        .status(403)
-        .json("You do not have permission to perform this action.");
+    } catch (err) {
+      res.status(500).json("Connection error!");
     }
-  } catch (err) {
-    res.status(500).json("Connection error!");
   }
-});
+);
 
 // get all booking information
 router.get("/bookings", verifyTokenAndAuthorization, async (req, res) => {

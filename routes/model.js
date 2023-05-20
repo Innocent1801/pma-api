@@ -13,7 +13,7 @@ router.get("/stats", verifyTokenAndAuthorization, async (req, res) => {
     const lastYear = new Date(date.setFullYear(date.getFullYear() - 1));
 
     const data = await Models.aggregate([
-      { $match: { createdAt: { $gte: lastYear } } },
+      { $match: { uuid: user.uuid, createdAt: { $gte: lastYear } } },
       {
         $project: {
           visitors: 1,
@@ -133,6 +133,7 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
             loggedUser.lastName +
             " viewed your portfolio.",
           notId: model.uuid,
+          notFrom: loggedUser.id,
         });
       }
       res.status(200).json({ ...user._doc, model });
@@ -146,6 +147,7 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
           loggedUser.lastName +
           " viewed your portfolio.",
         notId: model.uuid,
+        notFrom: loggedUser.id,
       });
       res.status(200).json({ model });
     } else {
@@ -169,6 +171,7 @@ router.get("/model/:param", async (req, res) => {
         notification: {},
         notTitle: "Someone viewed your portfolio.",
         notId: model.uuid,
+        notFrom: "",
       });
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
@@ -177,6 +180,7 @@ router.get("/model/:param", async (req, res) => {
         notification: {},
         notTitle: "Someone viewed your portfolio.",
         notId: model.uuid,
+        notFrom: "",
       });
       res.status(200).json({ model });
     } else {

@@ -28,12 +28,22 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
       res.status(404).json("No user found!");
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
 
 // get single user
+router.get("/user/:id", async (req, res) => {
+  try {
+    const user = await Users.findById(req.params.id);
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// by role
 router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = await Users.findById(req.params.id);

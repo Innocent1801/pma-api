@@ -29,6 +29,30 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// admin make payment for a user
+router.post("/admin/make-payment/:id", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const user = await Users.findById(req.params.id);
+
+    if (user) {
+      const newPayment = new Payment({
+        sender: user.id,
+        senderEmail: user.email,
+        amount: req.body.amount,
+        desc:
+          user.role === "model" ? "Model Subscription" : "Agency Subscription",
+      });
+      await newPayment.save();
+      await user.updateOne({ $set: { isSubscribed: true } });
+      res.status(200).json("Payment successfuly generated");
+    } else {
+      res.status(400).json("Oops! An error occured");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
 // get payments made by a user
 router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {
   try {

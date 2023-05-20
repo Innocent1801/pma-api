@@ -8,6 +8,7 @@ const Admin = require("../models/Admin");
 const { verifyTokenAndAdmin } = require("./jwt");
 const Client = require("../models/Client");
 const { sendConfirmationEmail } = require("../config/nodemailer.config");
+const UserLogin = require("../models/UserLogin");
 
 // registration
 router.post("/register", async (req, res) => {
@@ -104,52 +105,74 @@ router.post("/login", async (req, res) => {
     const agency = await Agency.findOne({ uuid: user?.id });
     const model = await Models.findOne({ uuid: user?.id });
     const client = await Client.findOne({ uuid: user?.id });
+    const login = await UserLogin.findById("64642190c062e98f1d5ba23e");
 
     if (user) {
       if (bcrypt.compareSync(req.body.password, user.password)) {
-        const accessToken = jwt.sign(
-          {
-            id: user._id,
-            uuid: user._id,
-            role: user.role,
-            email: user.email,
-          },
-          process.env.JWT_SEC,
-          {
-            expiresIn: "24h",
+        if (user.role === "client" && !user.isVerified) {
+          const accessToken = jwt.sign(
+            {
+              id: user._id,
+              uuid: user._id,
+              role: user.role,
+              email: user.email,
+            },
+            process.env.JWT_SEC,
+            {
+              expiresIn: "1h",
+            }
+          );
+          const { password, ...others } = user._doc;
+          await login.updateOne({ $inc: { login: +1 } });
+          res.status(200).json({ ...others, client, accessToken });
+        } else {
+          const accessToken = jwt.sign(
+            {
+              id: user._id,
+              uuid: user._id,
+              role: user.role,
+              email: user.email,
+            },
+            process.env.JWT_SEC,
+            {
+              expiresIn: "24h",
+            }
+          );
+          const { password, ...others } = user._doc;
+          switch (user.role) {
+            case "agency":
+              if (user.isSubscribed) {
+                await login.updateOne({ $inc: { login: +1 } });
+                res.status(200).json({ ...others, agency, accessToken });
+              } else {
+                res.status(403).json({
+                  message:
+                    "Please proceed to make your subscription payment before you can login",
+                  accessToken,
+                  userRole: user.role,
+                });
+              }
+              break;
+
+            case "model":
+              if (user.isSubscribed) {
+                await login.updateOne({ $inc: { login: +1 } });
+                res.status(200).json({ ...others, model, accessToken });
+              } else {
+                res.status(403).json({
+                  message:
+                    "Please proceed to make your subscription payment before you can login",
+                  accessToken,
+                  userRole: user.role,
+                });
+              }
+              break;
+
+            default:
+              await login.updateOne({ $inc: { login: +1 } });
+              res.status(200).json({ ...others, client, accessToken });
+              break;
           }
-        );
-        const { password, ...others } = user._doc;
-        switch (user.role) {
-          case "agency":
-            if (user.isSubscribed) {
-              res.status(200).json({ ...others, agency, accessToken });
-            } else {
-              res.status(403).json({
-                message:
-                  "Please proceed to make your subscription payment before you can login",
-                accessToken,
-                userRole: user.role,
-              });
-            }
-            break;
-
-          case "model":
-            if (user.isSubscribed) {
-              res.status(200).json({ ...others, model, accessToken });
-            } else {
-              res.status(403).json({
-                message:
-                  "Please proceed to make your subscription payment before you can login",
-                accessToken,
-                userRole: user.role,
-              });
-            }
-            break;
-
-          default:
-            res.status(200).json({ ...others, client, accessToken });
-            break;
         }
       } else {
         res.status(400).json("Email or password incorrect");

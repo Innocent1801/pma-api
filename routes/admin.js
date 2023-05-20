@@ -8,6 +8,70 @@ const Client = require("../models/Client");
 const Models = require("../models/Models");
 const Agency = require("../models/Agency");
 const { sendConfirmationEmail } = require("../config/nodemailer.config");
+const UserLogin = require("../models/UserLogin");
+
+// get users stat
+router.get("/stats", async (req, res) => {
+  try {
+    const date = new Date();
+    const lastYear = new Date(date.setFullYear(date.getFullYear() - 1));
+
+    const data = await Users.aggregate([
+      { $match: { createdAt: { $gte: lastYear } } },
+      {
+        $project: {
+          month: { $month: "$createdAt" },
+        },
+      },
+      {
+        $group: {
+          _id: "$month",
+          total: { $sum: 1 },
+        },
+      },
+    ]);
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// get login stat
+router.get("/login/stats", async (req, res) => {
+  try {
+    const login = await UserLogin.findOne({_id: '64642190c062e98f1d5ba23e'});
+    const date = new Date();
+    const lastYear = new Date(date.setFullYear(date.getFullYear() - 1));
+
+    const data = await UserLogin.aggregate([
+      { $match: { createdAt: { $gte: lastYear } } },
+      {
+        $project: {
+          login: 1,
+          month: { $month: "$createdAt" },
+        },
+      },
+      {
+        $group: {
+          _id: { loginId: login._id, month: "$month" },
+          login: { $sum: "$login" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          loginId: "$_id.loginId",
+          month: "$_id.month",
+          login: 1,
+        },
+      },
+    ]);
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
 
 // edit
 router.put("/:id", verifyTokenAndAdmin, async (req, res) => {

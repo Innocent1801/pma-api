@@ -4,6 +4,7 @@ const NotificationSchema = new mongoose.Schema(
   {
     notId: { type: String },
     notTitle: { type: String },
+    notFrom: { type: String },
     notification: { type: Object },
     url: { type: String },
     isRead: { type: Boolean, default: false },
