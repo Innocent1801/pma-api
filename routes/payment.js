@@ -4,6 +4,7 @@ const Models = require("../models/Models");
 const Payment = require("../models/Payment");
 const Users = require("../models/Users");
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
+const notification = require("../services/notifications");
 
 // make payment
 router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
@@ -21,6 +22,16 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
       await newPayment.save();
       await user.updateOne({ $set: { isSubscribed: true } });
       res.status(200).json("Payment successful");
+      await notification.sendNotification({
+        notification: {},
+        notTitle:
+          user.firstName +
+          " " +
+          user.lastName +
+          " just made their subscription payment, kindly review.",
+        notId: "639dc776aafcd38d67b1e2f7",
+        notFrom: user.id,
+      });
     } else {
       res.status(400).json("Oops! An error occured");
     }
@@ -30,28 +41,34 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // admin make payment for a user
-router.post("/admin/make-payment/:id", verifyTokenAndAdmin, async (req, res) => {
-  try {
-    const user = await Users.findById(req.params.id);
+router.post(
+  "/admin/make-payment/:id",
+  verifyTokenAndAdmin,
+  async (req, res) => {
+    try {
+      const user = await Users.findById(req.params.id);
 
-    if (user) {
-      const newPayment = new Payment({
-        sender: user.id,
-        senderEmail: user.email,
-        amount: req.body.amount,
-        desc:
-          user.role === "model" ? "Model Subscription" : "Agency Subscription",
-      });
-      await newPayment.save();
-      await user.updateOne({ $set: { isSubscribed: true } });
-      res.status(200).json("Payment successfuly generated");
-    } else {
-      res.status(400).json("Oops! An error occured");
+      if (user) {
+        const newPayment = new Payment({
+          sender: user.id,
+          senderEmail: user.email,
+          amount: req.body.amount,
+          desc:
+            user.role === "model"
+              ? "Model Subscription"
+              : "Agency Subscription",
+        });
+        await newPayment.save();
+        await user.updateOne({ $set: { isSubscribed: true } });
+        res.status(200).json("Payment successfuly generated");
+      } else {
+        res.status(400).json("Oops! An error occured");
+      }
+    } catch (err) {
+      res.status(500).json("Connection error!");
     }
-  } catch (err) {
-    res.status(500).json("Connection error!");
   }
-});
+);
 
 // get payments made by a user
 router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {

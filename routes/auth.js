@@ -9,6 +9,7 @@ const { verifyTokenAndAdmin } = require("./jwt");
 const Client = require("../models/Client");
 const { sendConfirmationEmail } = require("../config/nodemailer.config");
 const UserLogin = require("../models/UserLogin");
+const notification = require("../services/notifications");
 
 // registration
 router.post("/register", async (req, res) => {
@@ -77,11 +78,22 @@ router.post("/register", async (req, res) => {
           await newUser.save();
           break;
       }
+      
       if (newUser.role === "client") {
         res
           .status(200)
           .json("Registration successful! Please proceed to login");
         sendConfirmationEmail((email = newUser.email));
+        await notification.sendNotification({
+          notification: {},
+          notTitle:
+            newUser.firstName +
+            " " +
+            newUser.lastName +
+            " just created a new account, kindly view their profile.",
+          notId: "639dc776aafcd38d67b1e2f7",
+          notFrom: newUser.id,
+        });
       } else {
         res.status(200).json({
           message:
@@ -89,6 +101,16 @@ router.post("/register", async (req, res) => {
           accessToken,
         });
         sendConfirmationEmail((email = newUser.email));
+        await notification.sendNotification({
+          notification: {},
+          notTitle:
+            newUser.firstName +
+            " " +
+            newUser.lastName +
+            " just created a new account, kindly view their profile.",
+          notId: "639dc776aafcd38d67b1e2f7",
+          notFrom: newUser.id,
+        });
       }
     } else {
       res.status(400).json("User already exists!");
