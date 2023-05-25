@@ -10,12 +10,17 @@ const notification = require("../services/notifications");
 router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = await Users.findById(req.user.id);
+    const currentTime = new Date();
+    const futureDate = new Date(
+      currentTime.setFullYear(currentTime.getFullYear() + 1)
+    );
 
     if (user) {
       const newPayment = new Payment({
         sender: user.id,
         senderEmail: user.email,
         amount: req.body.amount,
+        endDate: futureDate,
         desc:
           user.role === "model" ? "Model Subscription" : "Agency Subscription",
       });
@@ -53,6 +58,7 @@ router.post(
           sender: user.id,
           senderEmail: user.email,
           amount: req.body.amount,
+          endDate: req.body.endDate,
           desc:
             user.role === "model"
               ? "Model Subscription"
@@ -88,8 +94,24 @@ router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {
 // get all payments
 router.get("/payments", verifyTokenAndAuthorization, async (req, res) => {
   try {
-    const payment = await Payment.find();
-    res.status(200).json(payment);
+    // filter models
+    const { payment } = req.query;
+    const keys = ["senderEmail"];
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(payment))
+      );
+    };
+
+    const payments = await Payment.find();
+    if (payment) {
+      res.status(200).json(search(payments));
+    } else if (payments) {
+      res.status(200).json(payments);
+    } else {
+      res.status(404).json("Not Found");
+    }
   } catch (err) {
     res.status(500).json("Connection error!");
   }

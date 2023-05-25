@@ -7,6 +7,7 @@ const PaymentSchema = new mongoose.Schema(
     amount: { type: Number },
     desc: { type: String },
     isApproved: { type: Boolean, default: false },
+    endDate: { type: Date },
   },
   { timestamps: true }
 );
