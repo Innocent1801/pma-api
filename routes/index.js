@@ -12,6 +12,7 @@ const NotificationRoute = require("./notification");
 const PaymentRoute = require("./payment");
 const ConversationRoute = require("./conversation");
 const BookModelRoute = require("./bookModel");
+const TransactionRoute = require("./transaction");
 
 router.use("/api/auth", authRoute);
 router.use("/api/model", modelRoute);
@@ -25,5 +26,6 @@ router.use("/api/notification", NotificationRoute);
 router.use("/api/payment", PaymentRoute);
 router.use("/api/conversation", ConversationRoute);
 router.use("/api/book", BookModelRoute);
+router.use("/api/transaction", TransactionRoute);
 
 module.exports = router;

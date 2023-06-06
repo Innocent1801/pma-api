@@ -87,7 +87,7 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.post("/create", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const agency = await Agency.findOne({ uuid: req.user.id });
-    if (agency && agency.models.length < 5) {
+    if (agency && agency.models.length < 50) {
       const newModel = new Models(req.body);
       await newModel.save();
       await newModel.updateOne({ $set: { uuid: agency.uuid } });
@@ -121,23 +121,18 @@ router.get("/models/all", verifyTokenAndAuthorization, async (req, res) => {
 });
 
 // agency edit model portfolio
-router.put("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
+router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const agency = await Agency.findOne({ uuid: req.user.uuid });
 
-    const model = await Models.findOneAndUpdate(
-      { uuid: req.params.uuid },
-      { $set: req.body },
-      { new: true }
-    );
-    const user = await Users.findOneAndUpdate(
-      { _id: req.params.uuid },
+    const model = await Models.findByIdAndUpdate(
+      req.params.id,
       { $set: req.body },
       { new: true }
     );
 
     if (agency && agency.models.includes(model._id)) {
-      res.status(200).json({ ...user._doc, model });
+      res.status(200).json(model);
     } else {
       res.status(400).json("Oops! An error occured");
     }
@@ -171,22 +166,28 @@ router.put(
 );
 
 // agency add photos to model portfolio
-router.post("/:uuid", verifyTokenAndAuthorization, async (req, res) => {
+router.put("/add_model_photo/:id", verifyTokenAndAuthorization, async (req, res) => {
   const agency = await Agency.findOne({ uuid: req.user.id });
-  const model = await Models.findOne({ uuid: req.params.uuid });
+  const model = await Models.findById(req.params.id);
 
   try {
     if (agency && agency.models.includes(model._id)) {
-      if (req.body.videos) {
-        await model.updateOne({
-          $push: { videos: { $each: req.body.photos } },
-        });
-      } else {
+      if (req.body.photos) {
         await model.updateOne({
           $push: { photos: { $each: req.body.photos } },
         });
       }
-      res.status(200).json("Photo uploaded");
+      if (req.body.polaroids) {
+        await model.updateOne({
+          $push: { polaroids: { $each: req.body.polaroids } },
+        });
+      }
+      if (req.body.videos) {
+        await model.updateOne({
+          $push: { videos: { $each: req.body.videos } },
+        });
+      }
+      res.status(200).json("Photos uploaded");
     } else {
       res.status(400).json("Oops! An error occured");
     }

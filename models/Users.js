@@ -16,6 +16,8 @@ const UserSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     isUpdated: { type: Boolean, default: false },
     isSubscribed: { type: Boolean, default: false },
+    transactionPin: { type: String },
+    currentTransactionPin: { type: String },
   },
   { timestamps: true }
 );

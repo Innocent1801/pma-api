@@ -52,7 +52,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
               notFrom: user.id,
             });
             await client.updateOne({
-              $set: { locked: client.locked + bookModel.price },
+              $inc: { locked: +bookModel.price },
             });
             res.status(200).json("Model booked");
             sendBooking(
@@ -70,7 +70,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
         } else {
           res
             .status(403)
-            .json("Your balance is not sufficient to book this model.");
+            .json("Your balance is not sufficient to book this model or model minimum booking price is below the amount set.");
         }
       } else {
         res.status(400).json("An error occured");
@@ -159,7 +159,7 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
           await findBookModel.updateOne({ $set: { isRejected: true } });
           if (findClient.locked > 0) {
             await findClient.updateOne({
-              $set: { locked: findClient.locked - findBookModel.price },
+              $inc: { locked: -findBookModel.price },
             });
           }
           await findModel.updateOne({
@@ -171,7 +171,7 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
               findModel.fullName +
               " declined your request for their service, you can go ahead to book another model.",
             notId: findClient.uuid,
-            notFrom: user.id
+            notFrom: user.id,
           });
           res.status(200).json("Request declined!");
           sendReject(

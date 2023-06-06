@@ -18,6 +18,10 @@ const AgencySchema = new mongoose.Schema(
     models: { type: Array },
     instagram: { type: String },
     jobPhotos:{type: Array},
+    wallet: { type: Number, default: 0 },
+    total: { type: Number, default: 0 },
+    pending: { type: Number, default: 0 },
+    withdrawn: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }

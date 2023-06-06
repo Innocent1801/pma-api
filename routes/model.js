@@ -279,7 +279,7 @@ router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
           $push: { videos: { $each: req.body.videos } },
         });
       }
-      res.status(200).json("Photo uploaded");
+      res.status(200).json("Photos uploaded");
     } else {
       res.status(400).json("Oops! An error occured");
     }
