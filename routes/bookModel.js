@@ -56,9 +56,9 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
             });
             res.status(200).json("Model booked");
             sendBooking(
-              ((modelName = model.fullName),
+              (modelName = model.fullName),
               (clientName = client.email),
-              (email = model.email))
+              (email = model.email)
             );
           } else {
             res
@@ -70,7 +70,9 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
         } else {
           res
             .status(403)
-            .json("Your balance is not sufficient to book this model or model minimum booking price is below the amount set.");
+            .json(
+              "Your balance is not sufficient to book this model or model minimum booking price is below the amount set."
+            );
         }
       } else {
         res.status(400).json("An error occured");
@@ -123,7 +125,8 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
               "Request accepted! You both can now start a conversation. Go to conversation page to start a conversation"
             );
           sendAccept(
-            ((modelName = findModel.fullName), (clientName = findClient.email))
+            (modelName = findModel.fullName),
+            (clientName = findClient.email)
           );
         } else {
           res
@@ -175,7 +178,8 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
           });
           res.status(200).json("Request declined!");
           sendReject(
-            ((modelName = findModel.fullName), (clientName = findClient.email))
+            (modelName = findModel.fullName),
+            (clientName = findClient.email)
           );
         } else {
           res
