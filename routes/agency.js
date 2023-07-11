@@ -142,6 +142,25 @@ router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// agency delete model
+router.delete("/:id", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const agency = await Agency.findOne({ uuid: req.user.uuid });
+
+    const model = await Models.findById(req.params.id);
+
+    if (agency && agency.models.includes(model._id)) {
+      await Models.findByIdAndDelete(req.params.id);
+      res.status(200).json("Account successfully deleted!");
+    } else {
+      res.status(400).json("Oops! An error occured");
+    }
+  } catch (err) {
+    // console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
 // agency add photo to job photos
 router.put(
   "/add_job_photo/:uuid",
@@ -166,34 +185,38 @@ router.put(
 );
 
 // agency add photos to model portfolio
-router.put("/add_model_photo/:id", verifyTokenAndAuthorization, async (req, res) => {
-  const agency = await Agency.findOne({ uuid: req.user.id });
-  const model = await Models.findById(req.params.id);
+router.put(
+  "/add_model_photo/:id",
+  verifyTokenAndAuthorization,
+  async (req, res) => {
+    const agency = await Agency.findOne({ uuid: req.user.id });
+    const model = await Models.findById(req.params.id);
 
-  try {
-    if (agency && agency.models.includes(model._id)) {
-      if (req.body.photos) {
-        await model.updateOne({
-          $push: { photos: { $each: req.body.photos } },
-        });
+    try {
+      if (agency && agency.models.includes(model._id)) {
+        if (req.body.photos) {
+          await model.updateOne({
+            $push: { photos: { $each: req.body.photos } },
+          });
+        }
+        if (req.body.polaroids) {
+          await model.updateOne({
+            $push: { polaroids: { $each: req.body.polaroids } },
+          });
+        }
+        if (req.body.videos) {
+          await model.updateOne({
+            $push: { videos: { $each: req.body.videos } },
+          });
+        }
+        res.status(200).json("Photos uploaded");
+      } else {
+        res.status(400).json("Oops! An error occured");
       }
-      if (req.body.polaroids) {
-        await model.updateOne({
-          $push: { polaroids: { $each: req.body.polaroids } },
-        });
-      }
-      if (req.body.videos) {
-        await model.updateOne({
-          $push: { videos: { $each: req.body.videos } },
-        });
-      }
-      res.status(200).json("Photos uploaded");
-    } else {
-      res.status(400).json("Oops! An error occured");
+    } catch (err) {
+      res.status(500).json("Connection error!");
     }
-  } catch (err) {
-    res.status(500).json("Connection error!");
   }
-});
+);
 
 module.exports = router;
