@@ -7,15 +7,41 @@ const { verifyTokenAndAuthorization } = require("./jwt");
 router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
+
+    const { query, page } = req.query;
+    const pageSize = 10;
+
     const notifications = await Notification.find({ notId: req.params.id });
+
+    let result = [];
+
+    result = notifications;
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      notifications: slicedResult,
+    };
+
     if (user.id === req.params.id) {
-      res.status(200).json(notifications);
+      res.status(200).json(response);
     } else {
       res
         .status(403)
         .json("You do not have permission to perform this action.");
     }
   } catch (err) {
+    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -25,8 +51,10 @@ router.get("/single-not/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
     const notifications = await Notification.findById(req.params.id);
+
     if (user.id === notifications.notId) {
       await notifications.updateOne({ $set: { isRead: true } });
+
       res.status(200).json(notifications);
     } else {
       res
@@ -43,14 +71,18 @@ router.delete("/delete/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
     const notification = await Notification.findById(req.params.id);
+
     if (notification) {
       if (user.id === notification.notId) {
         const bookId = notification?.notification?._id.toString();
+
         if (bookId) {
           const findBookModel = await BookModel.findById(bookId);
+
           if (findBookModel) {
             if (findBookModel.isAccepted || findBookModel.isRejected) {
               notification.delete();
+
               res.status(200).json("Notification removed");
             } else {
               res
@@ -73,7 +105,7 @@ router.delete("/delete/:id", verifyTokenAndAuthorization, async (req, res) => {
       res.status(404).json("Notification cannot be found");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });

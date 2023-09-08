@@ -7,7 +7,9 @@ const { verifyTokenAndAdmin, verifyTokenAndAuthorization } = require("./jwt");
 router.post("/post-blog", verifyTokenAndAdmin, async (req, res) => {
   try {
     const newBlog = new Blog(req.body);
+
     await newBlog.save();
+
     res.status(200).json(newBlog);
   } catch (err) {
     res.status(500).json("Connection error!");
@@ -17,9 +19,37 @@ router.post("/post-blog", verifyTokenAndAdmin, async (req, res) => {
 // get blogs posted
 router.get("/blogs", async (req, res) => {
   try {
+    // Pagination parameters
+    const { query, page } = req.query;
+    const pageSize = 10; // Number of items to return per page
+
     const blog = await Blog.find();
-    if (blog.length > 0) {
-      res.status(200).json(blog);
+
+    let result = [];
+    if (query) {
+      result = search(blog);
+    } else {
+      result = blog;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      blog: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(400).json("No blog found!");
     }
@@ -32,6 +62,7 @@ router.get("/blogs", async (req, res) => {
 router.get("/blog/:id", async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
+
     if (blog) {
       res.status(200).json(blog);
     } else {
@@ -45,9 +76,37 @@ router.get("/blog/:id", async (req, res) => {
 // get blogs by query category
 router.get("/blogs/query", async (req, res) => {
   try {
+    // Pagination parameters
+    const { queryB, page } = req.query;
+    const pageSize = 10; // Number of items to return per page
+
     const query = await Blog.find({ cat: req.query.cat });
-    if (query) {
-      res.status(200).json(query);
+
+    let result = [];
+    if (queryB) {
+      result = search(query);
+    } else {
+      result = query;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      blog: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(404).json("Blog not found!");
     }
@@ -63,15 +122,19 @@ router.post(
   async (req, res) => {
     try {
       const user = req.user;
+
       if (user) {
         const blog = await Blog.findById(req.params.id);
+
         if (blog) {
           const comment = new Comment({
             comment: req.body.comment,
             by: user.id,
             blog: blog._id,
           });
+
           comment.save();
+
           res.status(200).json("You commented on this blog!");
         } else {
           res.status(404).json("Blog has been removed!");
@@ -88,10 +151,38 @@ router.post(
 // get a blog comments
 router.get("/blog/comments/:id", async (req, res) => {
   try {
+    // Pagination parameters
+    const { query, page } = req.query;
+    const pageSize = 10; // Number of items to return per page
+
     const blog = await Blog.findById(req.params.id);
     const comments = await Comment.find({ blog: blog._id });
+
+    let result = [];
+    if (query) {
+      result = search(comments);
+    } else {
+      result = comments;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      jobs: slicedResult,
+    };
+
     if (blog) {
-      res.status(200).json(comments);
+      res.status(200).json(response);
     } else {
       res.status(404).json("Blog not found!");
     }
@@ -104,9 +195,11 @@ router.get("/blog/comments/:id", async (req, res) => {
 router.put("/blog/like/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
+
     if (user) {
       const blog = await Blog.findById(req.params.id);
       await blog.updateOne({ $push: { likes: user.id } });
+
       if (blog) {
         res.status(200).json("You like this blog");
       } else {
@@ -127,9 +220,11 @@ router.put(
   async (req, res) => {
     try {
       const user = req.user;
+
       if (user) {
         const blog = await Blog.findById(req.params.id);
         await blog.updateOne({ $pull: { likes: user.id } });
+
         if (blog) {
           res.status(200).json("You unlike this blog");
         } else {
@@ -152,6 +247,7 @@ router.put("/blog/edit", verifyTokenAndAdmin, async (req, res) => {
       { $set: req.body },
       { new: true }
     );
+
     res.status(200).json(blog);
   } catch (err) {
     res.status(500).json("Connection error!");
@@ -162,6 +258,7 @@ router.put("/blog/edit", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/blog/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const blog = await Blog.findByIdAndDelete(req.params.id);
+
     if (blog) {
       res.status(200).json("Blog deleted successfully");
     } else {

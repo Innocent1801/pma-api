@@ -18,6 +18,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
     const model = await Models.findOne({
       $or: [{ uuid: req.params.param }, { _id: req.params.param }],
     });
+
     // const agency = await Agency.findOne({ uuid: model.uuid });
     const client = await Client.findOne({ uuid: user._id });
 
@@ -28,6 +29,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
           model.minPrice <= req.body.price
         ) {
           const walletBal = client.wallet - client.locked;
+
           if (
             walletBal <= client.wallet &&
             walletBal >= req.body.price &&
@@ -44,17 +46,22 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
               modelId: model.uuid,
               clientId: user._id,
             });
+
             await bookModel.save();
+
             await notification.sendNotification({
               notification: bookModel,
               notTitle: bookModel.name + " requested for your service",
               notId: model.uuid,
               notFrom: user.id,
             });
+
             await client.updateOne({
               $inc: { locked: +bookModel.price },
             });
+
             res.status(200).json("Model booked");
+
             sendBooking(
               (modelName = model.fullName),
               (clientName = client.email),
@@ -83,7 +90,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
         .json("You do not have permission to perform this action.");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -92,22 +99,29 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
+
     if (user?.role === "model" || user?.role === "agency") {
       const findBookModel = await BookModel.findById(req.params.id);
+
       if (findBookModel && !findBookModel.isAccepted) {
         if (!findBookModel.isRejected) {
           const findModel = await Models.findOne({
             uuid: findBookModel.modelId,
           });
+
           const findClient = await Client.findOne({
             uuid: findBookModel.clientId,
           });
+
           await findBookModel.updateOne({ $set: { isAccepted: true } });
+
           const newConversation = new Conversation({
             sender: findBookModel.modelId,
             receiver: findBookModel.clientId,
           });
+
           await newConversation.save();
+
           await notification.sendNotification({
             notification: {},
             notTitle:
@@ -116,6 +130,7 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
             notId: findClient.uuid,
             notFrom: user.id,
           });
+
           await findModel.updateOne({
             $push: { acceptedJobs: findBookModel.id },
           });
@@ -124,6 +139,7 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
             .json(
               "Request accepted! You both can now start a conversation. Go to conversation page to start a conversation"
             );
+
           sendAccept(
             (modelName = findModel.fullName),
             (clientName = findClient.email)
@@ -142,7 +158,7 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
         .json("You do not have permission to perform this action.");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -151,13 +167,17 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
+
     if (user && user.role === "model") {
       const findBookModel = await BookModel.findById(req.params.id);
+
       if (findBookModel && !findBookModel.isRejected) {
         const findClient = await Client.findOne({
           uuid: findBookModel.clientId,
         });
+
         const findModel = await Models.findOne({ uuid: findBookModel.modelId });
+
         if (!findBookModel.isAccepted) {
           await findBookModel.updateOne({ $set: { isRejected: true } });
           if (findClient.locked > 0) {
@@ -165,9 +185,11 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
               $inc: { locked: -findBookModel.price },
             });
           }
+
           await findModel.updateOne({
             $push: { rejectedJobs: findBookModel.id },
           });
+
           await notification.sendNotification({
             notification: {},
             notTitle:
@@ -176,7 +198,9 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
             notId: findClient.uuid,
             notFrom: user.id,
           });
+
           res.status(200).json("Request declined!");
+
           sendReject(
             (modelName = findModel.fullName),
             (clientName = findClient.email)
@@ -206,10 +230,13 @@ router.put(
   async (req, res) => {
     try {
       const user = req.user;
+
       if (user && user.role === "client") {
         const findBookModel = await BookModel.findById(req.params.id);
+
         if (findBookModel && findBookModel.isAccepted) {
           await findBookModel.updateOne({ $set: { isJobDone: true } });
+
           res
             .status(200)
             .json("Job marked done, thanks for your confirmation.");
@@ -235,8 +262,10 @@ router.put(
 router.get("/booking/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = req.user;
+
     if (user) {
       const findBookModel = await BookModel.findById(req.params.id);
+
       if (findBookModel) {
         res.status(200).json(findBookModel);
       } else {
@@ -259,12 +288,41 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
+
       if (user) {
+        // Pagination parameters
+        const { query, page } = req.query;
+        const pageSize = 10; // Number of items to return per page
+
         const findBookModel = await BookModel.find({
           $or: [{ modelId: req.params.param }, { clientId: req.params.param }],
         });
-        if (findBookModel) {
-          res.status(200).json(findBookModel);
+
+        let result = [];
+        if (query) {
+          result = search(findBookModel);
+        } else {
+          result = findBookModel;
+        }
+
+        // Sort results in descending order based on createdAt date
+        result.sort((a, b) => b.createdAt - a.createdAt);
+
+        const totalPages = Math.ceil(result.length / pageSize);
+        const currentPage = parseInt(page) || 1;
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const slicedResult = result.slice(startIndex, endIndex);
+
+        const response = {
+          totalPages,
+          currentPage,
+          length: result.length,
+          models: slicedResult,
+        };
+
+        if (response.length > 0) {
+          res.status(200).json(response);
         } else {
           res.status(404).json("Booking not found!");
         }
@@ -282,9 +340,37 @@ router.get(
 // get all booking information
 router.get("/bookings", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    // Pagination parameters
+    const { query, page } = req.query;
+    const pageSize = 10; // Number of items to return per page
+
     const bookedModel = await BookModel.find();
     // const model = await Models.find({ _id: bookedModel.modelId });
-    res.status(200).json(bookedModel);
+
+    let result = [];
+    if (query) {
+      result = search(bookedModel);
+    } else {
+      result = bookedModel;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      models: slicedResult,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json("Connection error!");
   }

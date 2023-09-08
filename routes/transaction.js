@@ -33,9 +33,11 @@ router.post("/fund_wallet", verifyTokenAndAuthorization, async (req, res) => {
         amount: req.body.amount,
         desc: "Wallet funding",
       });
+
       await newPayment.save();
       await user.updateOne({ $inc: { wallet: +req.body.amount } });
       await user.updateOne({ $inc: { total: +req.body.amount } });
+
       res.status(200).json("Payment successful");
     } else {
       res.status(400).json("Oops! An error occured");
@@ -48,10 +50,15 @@ router.post("/fund_wallet", verifyTokenAndAuthorization, async (req, res) => {
 // get transaction history
 router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    // Pagination parameters
+    const { query, page } = req.query;
+    const pageSize = 10; // Number of items to return per page
+
     const client = await Client.findOne({ uuid: req.user.id });
     const user = await Users.findById(req.user.id);
 
     const fundedHistory = await Wallet.find({ sender: client?.id });
+
     const transferHistory = await Transfer.find({
       $or: [
         { sender: client?.brandName },
@@ -59,6 +66,7 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
         { receiverId: user.id },
       ],
     });
+
     const withdrawHistory = await Invoice.find({ withdrawBy: user?.email });
 
     // Merge the three arrays
@@ -71,7 +79,27 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
     // Sort the combined history array by timestamp in descending order
     combinedHistory.sort((a, b) => b.createdAt - a.createdAt);
 
-    res.status(200).json(combinedHistory);
+    let result = [];
+    if (query) {
+      result = search(combinedHistory);
+    } else {
+      result = combinedHistory;
+    }
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      transactions: slicedResult,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json("Connection error!");
   }
@@ -94,23 +122,30 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
             amount: req.body.amount,
             withdrawBy: req.user.email,
           });
+
           await newInvoice.save();
+
           await model.updateOne({
             $inc: { wallet: -req.body.amount },
           });
+
           await model.updateOne({
             $inc: { withdrawn: +req.body.amount },
           });
+
           if (agency) {
             await agency.updateOne({
               $inc: { wallet: -req.body.amount },
             });
+
             await agency.updateOne({
               $inc: { withdrawn: +req.body.amount },
             });
           }
+
           await notification.sendNotification({
             notification: {},
+
             notTitle:
               "Withdrawal request from" + model.fullName
                 ? model.fullName
@@ -119,8 +154,10 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
             notId: "639dc776aafcd38d67b1e2f7",
             notFrom: user.id,
           });
+
           const fullName = model.fullName ? model.fullName : agency.fullName;
           const receiverEmail = model.email ? model.email : agency.email;
+
           WithdrawalNot(
             (from = fullName),
             (email = receiverEmail),
@@ -129,6 +166,7 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
             (accountName = newInvoice.accountName),
             (accountNo = newInvoice.accountNo)
           );
+
           res
             .status(200)
             .json(
@@ -144,7 +182,7 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
       res.status(400).json("Oops! An error occured");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -158,9 +196,11 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
     if (client) {
       if (client.wallet >= req.body.amount) {
         const user = await Users.findOne({ username: req.body.username });
+
         const model = await Models.findOne({
           $or: [{ uuid: user?._id }, { username: req.body.username }],
         });
+
         const agency = await Agency.findOne({ uuid: model?.uuid });
 
         if (model) {
@@ -173,20 +213,25 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
             await model.updateOne({
               $inc: { wallet: +req.body.amount },
             });
+
             await model.updateOne({
               $inc: { total: +req.body.amount },
             });
+
             if (agency) {
               await agency.updateOne({
                 $inc: { wallet: +req.body.amount },
               });
+
               await agency.updateOne({
                 $inc: { total: +req.body.amount },
               });
             }
+
             await client.updateOne({
               $inc: { wallet: -req.body.amount },
             });
+
             if (client.locked > 0) {
               const newLocked = client.locked - req.body.amount;
               const updatedLocked = newLocked >= 0 ? newLocked : 0;
@@ -195,9 +240,11 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
                 $set: { locked: updatedLocked },
               });
             }
+
             await client.updateOne({
               $inc: { withdrawn: +req.body.amount },
             });
+
             const newTransfer = new Transfer({
               sender: client.brandName,
               receiverId: model.uuid,
@@ -205,7 +252,9 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
               amount: req.body.amount,
               remark: req.body.remark,
             });
+
             await newTransfer.save();
+
             await notification.sendNotification({
               notification: {},
               notTitle:
@@ -216,12 +265,15 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
               notId: model.uuid,
               notFrom: client.id,
             });
+
             const name = model.email ? model.email : agency.email;
+
             PaymentNot(
               (clientName = client.brandName),
               (modelName = name),
               (amount = newTransfer.amount)
             );
+
             res.status(200).json("Payment successful");
           } else {
             res.status(400).json("Invalid pin, try again.");
@@ -240,7 +292,7 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
       res.status(400).json("Oops! An error occured");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -272,9 +324,11 @@ router.put(
             { $set: req.body },
             { new: true }
           );
+
           await user.updateOne({
             $set: { currentTransactionPin: hashedPassword },
           });
+
           res.status(200).json(user);
         } else {
           res
@@ -285,14 +339,17 @@ router.put(
         if (req.body.transactionPin) {
           req.body.transactionPin = hashedPassword;
         }
+
         const user = await Users.findByIdAndUpdate(
           req.user.id,
           { $set: req.body },
           { new: true }
         );
+
         await user.updateOne({
           $set: { currentTransactionPin: hashedPassword },
         });
+
         res.status(200).json(user);
       }
     } catch (err) {

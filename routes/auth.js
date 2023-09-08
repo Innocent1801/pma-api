@@ -31,6 +31,7 @@ router.post("/register", async (req, res) => {
         mobileNo: req.body.mobileNo,
         referral: req.body.referral,
       });
+
       await newUser.save();
 
       const accessToken = jwt.sign(
@@ -45,6 +46,7 @@ router.post("/register", async (req, res) => {
           expiresIn: "30m",
         }
       );
+
       const { password, ...others } = newUser._doc;
 
       switch (newUser.role) {
@@ -78,12 +80,14 @@ router.post("/register", async (req, res) => {
           await newUser.save();
           break;
       }
-      
+
       if (newUser.role === "client") {
         res
           .status(200)
           .json("Registration successful! Please proceed to login");
+
         sendConfirmationEmail((email = newUser.email));
+
         await notification.sendNotification({
           notification: {},
           notTitle:
@@ -100,7 +104,9 @@ router.post("/register", async (req, res) => {
             "Registration successful! Please proceed to make your subscription payment",
           accessToken,
         });
+
         sendConfirmationEmail((email = newUser.email));
+
         await notification.sendNotification({
           notification: {},
           notTitle:
@@ -144,8 +150,10 @@ router.post("/login", async (req, res) => {
               expiresIn: "1h",
             }
           );
+
           const { password, ...others } = user._doc;
           await login.updateOne({ $inc: { login: +1 } });
+
           res.status(200).json({ ...others, client, accessToken });
         } else {
           const accessToken = jwt.sign(
@@ -160,11 +168,14 @@ router.post("/login", async (req, res) => {
               expiresIn: "24h",
             }
           );
+
           const { password, ...others } = user._doc;
+
           switch (user.role) {
             case "agency":
               if (user.isSubscribed) {
                 await login.updateOne({ $inc: { login: +1 } });
+
                 res.status(200).json({ ...others, agency, accessToken });
               } else {
                 res.status(403).json({
@@ -179,6 +190,7 @@ router.post("/login", async (req, res) => {
             case "model":
               if (user.isSubscribed) {
                 await login.updateOne({ $inc: { login: +1 } });
+
                 res.status(200).json({ ...others, model, accessToken });
               } else {
                 res.status(403).json({
@@ -192,6 +204,7 @@ router.post("/login", async (req, res) => {
 
             default:
               await login.updateOne({ $inc: { login: +1 } });
+
               res.status(200).json({ ...others, client, accessToken });
               break;
           }
@@ -203,6 +216,7 @@ router.post("/login", async (req, res) => {
       res.status(400).json("Email or password incorrect");
     }
   } catch (err) {
+    // console.log(err)
     res.status(500).json("Connection error!");
   }
 });
@@ -228,6 +242,7 @@ router.post("/create-pma/admin", verifyTokenAndAdmin, async (req, res) => {
         password: hashedPassword,
         adminRole: req.body.role,
       });
+
       await newUser.save();
 
       res.status(200).json("Registration successful!");
@@ -253,7 +268,9 @@ router.post("/login-pma/admin", async (req, res) => {
             expiresIn: "6h",
           }
         );
+
         const { password, isAdmin, aai, ...others } = user._doc;
+
         res.status(200).json({ ...others, accessToken });
       } else {
         res.status(400).json("Email or password incorrect");

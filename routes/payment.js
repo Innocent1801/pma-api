@@ -24,9 +24,12 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
         desc:
           user.role === "model" ? "Model Subscription" : "Agency Subscription",
       });
+
       await newPayment.save();
       await user.updateOne({ $set: { isSubscribed: true } });
+
       res.status(200).json("Payment successful");
+
       await notification.sendNotification({
         notification: {},
         notTitle:
@@ -64,8 +67,10 @@ router.post(
               ? "Model Subscription"
               : "Agency Subscription",
         });
+
         await newPayment.save();
         await user.updateOne({ $set: { isSubscribed: true } });
+
         res.status(200).json("Payment successfuly generated");
       } else {
         res.status(400).json("Oops! An error occured");
@@ -80,9 +85,34 @@ router.post(
 router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = await Users.findById(req.user.id);
+
     if (user) {
+      const { query, page } = req.query;
+      const pageSize = 10; // Number of items to return per page
+
       const payment = await Payment.find({ sender: user.id });
-      res.status(200).json(payment);
+
+      let result = [];
+
+      result = payment;
+
+      // Sort results in descending order based on createdAt date
+      result.sort((a, b) => b.createdAt - a.createdAt);
+
+      const totalPages = Math.ceil(result.length / pageSize);
+      const currentPage = parseInt(page) || 1;
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const slicedResult = result.slice(startIndex, endIndex);
+
+      const response = {
+        totalPages,
+        currentPage,
+        length: result.length,
+        payment: slicedResult,
+      };
+
+      res.status(200).json(response);
     } else {
       res.status(400).json("Oops! An error occured");
     }
@@ -95,8 +125,9 @@ router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/payments", verifyTokenAndAuthorization, async (req, res) => {
   try {
     // filter models
-    const { payment } = req.query;
+    const { payment, page } = req.query;
     const keys = ["senderEmail"];
+    const pageSize = 10; // Number of items to return per page
 
     const search = (data) => {
       return data?.filter((item) =>
@@ -105,10 +136,32 @@ router.get("/payments", verifyTokenAndAuthorization, async (req, res) => {
     };
 
     const payments = await Payment.find();
+
+    let result = [];
     if (payment) {
-      res.status(200).json(search(payments));
-    } else if (payments) {
-      res.status(200).json(payments);
+      result = search(payments);
+    } else {
+      result = payments;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      payments: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(404).json("Not Found");
     }
@@ -121,6 +174,7 @@ router.get("/payments", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/payment/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id);
+
     res.status(200).json(payment);
   } catch (err) {
     res.status(500).json("Connection error!");
@@ -131,19 +185,23 @@ router.get("/payment/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/approve/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id);
+
     if (payment) {
       const user = await Users.findOne({ _id: payment.sender });
+
       if (user.role === "model") {
         const model = await Models.findOne({ uuid: user._id });
         await user.updateOne({ $set: { isVerified: true } });
         await model.updateOne({ $set: { isVerified: true } });
         await payment.updateOne({ $set: { isApproved: true } });
+
         res.status(200).json("Payment approved");
       } else if (user.role === "agency") {
         const agency = await Agency.findOne({ uuid: user._id });
         await user.updateOne({ $set: { isVerified: true } });
         await agency.updateOne({ $set: { isVerified: true } });
         await payment.updateOne({ $set: { isApproved: true } });
+
         res.status(200).json("Payment approved");
       }
     } else {
@@ -158,6 +216,7 @@ router.put("/approve/:id", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/delete/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const payment = await Payment.findByIdAndDelete(req.params.id);
+
     if (payment) {
       res.status(200).json("Payment invoice deleted.");
     } else {

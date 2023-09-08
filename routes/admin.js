@@ -39,7 +39,7 @@ router.get("/stats", async (req, res) => {
 // get login stat
 router.get("/login/stats", async (req, res) => {
   try {
-    const login = await UserLogin.findOne({_id: '64642190c062e98f1d5ba23e'});
+    const login = await UserLogin.findOne({ _id: "64642190c062e98f1d5ba23e" });
     const date = new Date();
     const lastYear = new Date(date.setFullYear(date.getFullYear() - 1));
 
@@ -87,6 +87,7 @@ router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
       { $set: req.body },
       { new: true }
     );
+
     res.status(200).json(user);
   } catch (err) {
     res.status(500).json("Connection error!");
@@ -114,6 +115,7 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
         mobileNo: req.body.mobileNo,
         referral: req.body.referral,
       });
+
       await newUser.save();
 
       const { password, ...others } = newUser._doc;
@@ -150,12 +152,13 @@ router.post("/add-user", verifyTokenAndAdmin, async (req, res) => {
           break;
       }
       res.status(200).json({ ...others });
+
       sendConfirmationEmail((email = newUser.email));
     } else {
       res.status(400).json("User already exists!");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -174,15 +177,18 @@ router.put("/:id/edit-user", verifyTokenAndAdmin, async (req, res) => {
       { $set: req.body },
       { new: true }
     );
+
     if (user.role === "model") {
       const model = await Models.findOneAndUpdate(
         { uuid: user._id },
         { $set: req.body },
         { new: true }
       );
+
       await model.updateOne({
         $set: { fullName: user.firstName + " " + user.lastName },
       });
+
       await model.updateOne({ $set: { email: user.email } });
     } else if (user.role === "agency") {
       const agency = await Agency.findOneAndUpdate(
@@ -190,9 +196,11 @@ router.put("/:id/edit-user", verifyTokenAndAdmin, async (req, res) => {
         { $set: req.body },
         { new: true }
       );
+
       await agency.updateOne({
         $set: { fullName: user.firstName + " " + user.lastName },
       });
+
       await agency.updateOne({ $set: { email: user.email } });
     } else if (user.role === "client") {
       const client = await Client.findOneAndUpdate(
@@ -202,6 +210,7 @@ router.put("/:id/edit-user", verifyTokenAndAdmin, async (req, res) => {
       );
       await client.updateOne({ $set: { email: user.email } });
     }
+
     res.status(200).json("Data uploaded successfully!");
   } catch (err) {
     res.status(500).json("Connection error!");
@@ -211,8 +220,36 @@ router.put("/:id/edit-user", verifyTokenAndAdmin, async (req, res) => {
 // get all payments made
 router.get("/payment/all", verifyTokenAndAdmin, async (req, res) => {
   try {
+    // Pagination parameters
+    const { query, page } = req.query;
+    const pageSize = 10; // Number of items to return per page
+
     const payment = await Payment.find();
-    res.status(200).json(payment);
+
+    let result = [];
+    if (query) {
+      result = search(payment);
+    } else {
+      result = payment;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      payment: slicedResult,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json("Connection error!");
   }
@@ -237,13 +274,15 @@ router.get("/payment/:id", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
-// delete a agency
+// delete an agency
 router.delete("/agency/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Agency.findById(req.params.id);
+
     if (user) {
       await user.delete();
       await Users.findOneAndDelete({ _id: user.uuid });
+
       res.status(200).json("User deleted!");
     } else {
       res.status(404).json("User not found!");
@@ -257,9 +296,11 @@ router.delete("/agency/:id", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/model/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Models.findById(req.params.id);
+
     if (user) {
       await user.delete();
       await Users.findOneAndDelete({ _id: user.uuid });
+
       res.status(200).json("User deleted!");
     } else {
       res.status(404).json("User not found!");
@@ -273,9 +314,11 @@ router.delete("/model/:id", verifyTokenAndAdmin, async (req, res) => {
 router.delete("/client/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Client.findById(req.params.id);
+
     if (user) {
       await user.delete();
       await Users.findOneAndDelete({ _id: user.uuid });
+
       res.status(200).json("User deleted!");
     } else {
       res.status(404).json("User not found!");

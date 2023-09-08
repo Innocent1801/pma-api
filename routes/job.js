@@ -10,10 +10,10 @@ const Client = require("../models/Client");
 
 // post a new job
 router.post("/post-job", verifyTokenAndAuthorization, async (req, res) => {
-  const user = await Users.findById(req.user.id);
+  try {
+    const user = await Users.findById(req.user.id);
 
-  if (user) {
-    try {
+    if (user) {
       const newJob = new Job({
         postBy: user.id,
         title: req.body.title,
@@ -32,29 +32,63 @@ router.post("/post-job", verifyTokenAndAuthorization, async (req, res) => {
         height: req.body.height,
         expire: req.body.expire,
       });
+
       if (newJob.photos) {
         await newJob.updateOne({ $push: { photos: req.body.photos } });
       }
+
       await newJob.save();
+
       res.status(200).json("Job posted successfully.");
       // console.log(newJob)
-    } catch (err) {
-      res.status(500).json("Connection error!");
+    } else {
+      res.status(400).json("Oops! An error occured");
     }
-  } else {
-    res.status(400).json("Oops! An error occured");
+  } catch (err) {
+    res.status(500).json("Connection error!");
   }
 });
 
 // get all jobs posted
 router.get("/jobs/all", async (req, res) => {
-  const jobs = await Job.find();
   try {
-    if (jobs.length > 0) {
-      res.status(200).json(jobs);
+    // Pagination parameters
+    const { query, page } = req.query;
+    const keys = ["country", "state"];
+    const pageSize = 10; // Number of items to return per page
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(query))
+      );
+    };
+
+    const jobs = await Job.find();
+
+    let result = [];
+    if (query) {
+      result = search(jobs);
     } else {
-      res.status(400).json("No jobs found!");
+      result = jobs;
     }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      jobs: slicedResult,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json("Connection error!");
   }
@@ -62,11 +96,40 @@ router.get("/jobs/all", async (req, res) => {
 
 // get jobs posted
 router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
-  const user = await Users.findById(req.user.id);
-  const jobs = await Job.find({ postBy: user.id });
   try {
-    if (jobs.length > 0) {
-      res.status(200).json(jobs);
+    // Pagination parameters
+    const { query, page } = req.query;
+
+    const pageSize = 10; // Number of items to return per page
+
+    const user = await Users.findById(req.user.id);
+    const jobs = await Job.find({ postBy: user.id });
+
+    let result = [];
+    if (query) {
+      result = search(jobs);
+    } else {
+      result = jobs;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      jobs: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(400).json("No jobs found!");
     }
@@ -77,8 +140,9 @@ router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
 
 // get a single job
 router.get("/job/:id", async (req, res) => {
-  const job = await Job.findById(req.params.id);
   try {
+    const job = await Job.findById(req.params.id);
+
     if (job) {
       res.status(200).json(job);
     } else {
@@ -93,6 +157,7 @@ router.get("/job/:id", async (req, res) => {
 router.delete("/job/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const job = await Job.findByIdAndDelete(req.params.id);
+
     if (job) {
       res.status(200).json("Job deleted successfully");
     } else {
@@ -126,7 +191,9 @@ router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
         notId: job.postBy,
         notFrom: model.uuid,
       });
-      console.log(client.email);
+
+      // console.log(client.email);
+
       jobApply((modelName = model.fullName), (clientName = client.email));
       res
         .status(200)
@@ -146,6 +213,7 @@ router.put(
   async (req, res) => {
     try {
       const user = await Users.findById(req.user.id);
+
       if (user) {
         const job = await Job.findByIdAndUpdate(
           req.params.id,

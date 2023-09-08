@@ -45,16 +45,57 @@ router.get("/stats", verifyTokenAndAuthorization, async (req, res) => {
 // get all model
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    // Pagination parameters
+    const { query, page, gender } = req.query;
+    const keys = ["country", "state"];
+    const genderKey = ["gender"];
+    const pageSize = 10; // Number of items to return per page
+
+    const search = (data) => {
+      return data?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(query))
+      );
+    };
+
+    const searchGender = (data) => {
+      return data?.filter((item) =>
+        genderKey.some((key) => item[key]?.toLowerCase()?.includes(gender))
+      );
+    };
+
     const findModels = await Users.find({ isUpdated: true });
     const users = findModels.map((item) => item.id);
     const user = await Models.find({ uuid: { $in: users } });
-    if (findModels.length > 0) {
-      res.status(200).json(user);
+
+    let result = [];
+    if (query) {
+      result = search(user);
+    } else if (gender) {
+      result = searchGender(user);
     } else {
-      res.status(404).json("No model at the moment");
+      result = user;
     }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      models: slicedResult,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json("Connection error!");
+    // console.log(err);
   }
 });
 
@@ -62,8 +103,9 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/models", verifyTokenAndAdmin, async (req, res) => {
   try {
     // filter models
-    const { model } = req.query;
+    const { model, page } = req.query;
     const keys = ["fullName", "email"];
+    const pageSize = 10; // Number of items to return per page
 
     const search = (data) => {
       return data?.filter((item) =>
@@ -72,10 +114,32 @@ router.get("/models", verifyTokenAndAdmin, async (req, res) => {
     };
 
     const findModels = await Models.find();
+
+    let result = [];
     if (model) {
-      res.status(200).json(search(findModels));
-    } else if (findModels) {
-      res.status(200).json(findModels);
+      result = search(findModels);
+    } else {
+      result = findModels;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      models: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(404).json("No model at the moment");
     }
@@ -88,8 +152,9 @@ router.get("/models", verifyTokenAndAdmin, async (req, res) => {
 router.get("/find/models", async (req, res) => {
   try {
     // filter models
-    const { model } = req.query;
+    const { model, page } = req.query;
     const keys = ["country", "state"];
+    const pageSize = 10; // Number of items to return per page
 
     const search = (data) => {
       return data?.filter((item) =>
@@ -100,16 +165,38 @@ router.get("/find/models", async (req, res) => {
     const user = await Users.find({ isUpdated: true });
     const userIds = user.map((item) => item.id);
     const models = await Models.find({ uuid: { $in: userIds } });
+
+    let result = [];
     if (model) {
-      res.status(200).json(search(models));
-    } else if (models) {
-      res.status(200).json(models);
+      result = search(models);
+    } else {
+      result = models;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      models: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(404).json("No model at the moment");
     }
   } catch (err) {
     res.status(500).json("Connection error!");
-    console.log(err);
+    // console.log(err);
   }
 });
 
@@ -117,30 +204,36 @@ router.get("/find/models", async (req, res) => {
 router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const loggedUser = await Users.findById(req.user.id);
+
     const model = await Models.findOne({
       $or: [{ uuid: req.params.param }, { _id: req.params.param }],
     });
+
     const user = await Users.findOne({ _id: model.uuid });
 
     if (user) {
       if (user.id !== req.user.id) {
         await model.updateOne({ $set: { visitors: model.visitors + 1 } });
-        await notification.sendNotification({
-          notification: {},
-          notTitle:
-            loggedUser.firstName +
-            " " +
-            loggedUser.lastName +
-            " viewed your portfolio.",
-          notId: model.uuid,
-          notFrom: loggedUser.id,
-        });
+
+        // await notification.sendNotification({
+        //   notification: {},
+        //   notTitle:
+        //     loggedUser.firstName +
+        //     " " +
+        //     loggedUser.lastName +
+        //     " viewed your portfolio.",
+        //   notId: model.uuid,
+        //   notFrom: loggedUser.id,
+        // });
       }
+
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
       await model.updateOne({ $set: { visitors: visitors + 1 } });
+
       await notification.sendNotification({
         notification: {},
+
         notTitle:
           loggedUser.firstName +
           " " +
@@ -149,6 +242,7 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
         notId: model.uuid,
         notFrom: loggedUser.id,
       });
+
       res.status(200).json({ model });
     } else {
       res.status(404).json("Model not found!");
@@ -164,7 +258,9 @@ router.get("/model/:param", async (req, res) => {
     const model = await Models.findOne({
       $or: [{ uuid: req.params.param }, { _id: req.params.param }],
     });
+
     const user = await Users.findOne({ _id: model.uuid });
+
     if (user) {
       await model.updateOne({ $set: { visitors: model.visitors + 1 } });
       await notification.sendNotification({
@@ -173,15 +269,18 @@ router.get("/model/:param", async (req, res) => {
         notId: model.uuid,
         notFrom: "",
       });
+
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
       await model.updateOne({ $set: { visitors: visitors + 1 } });
+
       await notification.sendNotification({
         notification: {},
         notTitle: "Someone viewed your portfolio.",
         notId: model.uuid,
         notFrom: "",
       });
+
       res.status(200).json({ model });
     } else {
       res.status(404).json("Model not found!");
@@ -199,6 +298,7 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
       { $set: req.body },
       { new: true }
     );
+
     const user = await Users.findByIdAndUpdate(
       req.user.id,
       { $set: req.body },
@@ -207,9 +307,14 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 
     if (user) {
       await user.updateOne({ $set: { isUpdated: true } });
-      res.status(200).json({ ...user._doc, model });
+
+      const { password, ...others } = user._doc;
+
+      res.status(200).json({ ...others, model });
+
       await notification.sendNotification({
         notification: {},
+
         notTitle:
           user.firstName +
           " " +
@@ -222,7 +327,7 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
       res.status(404).json("User not found!");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -231,14 +336,16 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/feature/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const model = await Models.findById(req.params.id);
+
     if (model) {
       await model.updateOne({ $set: { isFeatured: true } });
+
       res.status(200).json(model);
     } else {
       res.status(404).json("User not found!");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -247,14 +354,16 @@ router.put("/feature/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/unfeature/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const model = await Models.findById(req.params.id);
+
     if (model) {
       await model.updateOne({ $set: { isFeatured: false } });
+
       res.status(200).json(model);
     } else {
       res.status(404).json("User not found!");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -263,28 +372,32 @@ router.put("/unfeature/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const model = await Models.findOne({ uuid: req.user.uuid });
+
     if (model) {
       if (req.body.photos) {
         await model.updateOne({
           $push: { photos: { $each: req.body.photos } },
         });
       }
+
       if (req.body.polaroids) {
         await model.updateOne({
           $push: { polaroids: { $each: req.body.polaroids } },
         });
       }
+
       if (req.body.videos) {
         await model.updateOne({
           $push: { videos: { $each: req.body.videos } },
         });
       }
+
       res.status(200).json("Photos uploaded");
     } else {
       res.status(400).json("Oops! An error occured");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -293,12 +406,14 @@ router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
 router.put("/remove/photo", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const model = await Models.findOne({ uuid: req.user.uuid });
+
     if (model) {
       if (req.body.photo) {
         await model.updateOne({ $pull: { photos: req.body.photo } });
         await model.updateOne({ $pull: { polaroids: req.body.photo } });
         await model.updateOne({ $pull: { videos: req.body.photo } });
       }
+
       res.status(200).json("Photo deleted!");
     } else {
       res.status(400).json("Oops! An error occured");

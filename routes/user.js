@@ -10,8 +10,10 @@ const Client = require("../models/Client");
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
     // filter users
-    const { user } = req.query;
+    const { user, page } = req.query;
     const keys = ["email"];
+
+    const pageSize = 10; // Number of items to return per page
 
     const search = (data) => {
       return data?.filter((item) =>
@@ -20,15 +22,37 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
     };
 
     const users = await Users.find();
-    if (user) {
-      res.status(200).json(search(users));
-    } else if (users) {
-      res.status(200).json(users);
+
+    let result = [];
+    if (query) {
+      result = search(users);
+    } else {
+      result = users;
+    }
+
+    // Sort results in descending order based on createdAt date
+    result.sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalPages = Math.ceil(result.length / pageSize);
+    const currentPage = parseInt(page) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const slicedResult = result.slice(startIndex, endIndex);
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: result.length,
+      users: slicedResult,
+    };
+
+    if (response.length > 0) {
+      res.status(200).json(response);
     } else {
       res.status(404).json("No user found!");
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     res.status(500).json("Connection error!");
   }
 });
@@ -37,7 +61,15 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/user/:id", async (req, res) => {
   try {
     const user = await Users.findById(req.params.id);
-    res.status(200).json(user);
+
+    const { password, transactionPin, currentTransactionPin, ...others } =
+      user._doc;
+
+    if (user) {
+      res.status(200).json({ ...others });
+    } else {
+      res.status(404).json("User not found!");
+    }
   } catch (err) {
     res.status(500).json("Connection error!");
   }
@@ -47,16 +79,23 @@ router.get("/user/:id", async (req, res) => {
 router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = await Users.findById(req.params.id);
+
+    const { password, transactionPin, currentTransactionPin, ...others } =
+      user._doc;
+
     if (user) {
       if (user.role === "model") {
         const model = await Models.findOne({ uuid: req.params.id });
-        res.status(200).json({ ...user._doc, model });
+
+        res.status(200).json({ ...others, model });
       } else if (user.role === "agency") {
         const agency = await Agency.findOne({ uuid: req.params.id });
-        res.status(200).json({ ...user._doc, agency });
+
+        res.status(200).json({ ...others, agency });
       } else if (user.role === "client") {
         const client = await Client.findOne({ uuid: req.params.id });
-        res.status(200).json({ ...user._doc, client });
+
+        res.status(200).json({ ...others, client });
       }
     } else {
       res.status(404).json("User not found!");
@@ -80,6 +119,7 @@ router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
       { $set: req.body },
       { new: true }
     );
+
     res.status(200).json(user);
   } catch (err) {
     // console.log(err);
@@ -91,17 +131,24 @@ router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
 router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const user = await Users.findById(req.params.id);
+
     if (user.role === "client") {
       await user.delete();
+
       await Client.findOneAndDelete({ uuid: user._id });
+
       res.status(200).json("User deleted!");
     } else if (user.role === "model") {
       await user.delete();
+
       await Models.findOneAndDelete({ uuid: user._id });
+
       res.status(200).json("User deleted!");
     } else if (user.role === "agency") {
       await user.delete();
+
       await Agency.findOneAndDelete({ uuid: user._id });
+
       res.status(200).json("User deleted!");
     } else {
       res.status(404).json("User not found!");
