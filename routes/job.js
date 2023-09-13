@@ -63,7 +63,7 @@ router.get("/jobs/all", async (req, res) => {
       );
     };
 
-    const jobs = await Job.find();
+    const jobs = await Job.find({ isAvailable: true });
 
     let result = [];
     if (query) {
@@ -176,30 +176,38 @@ router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
     const client = await Client.findOne({ uuid: job.postBy });
 
     if (job) {
-      await job.updateOne({ $push: { applied: model.uuid } });
-      const newConversation = new Conversation({
-        sender: model.uuid,
-        receiver: job.postBy,
-      });
-      await newConversation.save();
+      if (job.applied.includes(model.uuid)) {
+        res
+          .status(403)
+          .json(
+            "You have already applied for this job, kindly continue conversation with the jobber."
+          );
+      } else {
+        await job.updateOne({ $push: { applied: model.uuid } });
+        const newConversation = new Conversation({
+          sender: model.uuid,
+          receiver: job.postBy,
+        });
+        await newConversation.save();
 
-      await notification.sendNotification({
-        notification: {},
-        notTitle:
-          model.fullName +
-          " applied for the job you posted, you both can now start a conversation. Go to conversation page to start a conversation",
-        notId: job.postBy,
-        notFrom: model.uuid,
-      });
+        await notification.sendNotification({
+          notification: {},
+          notTitle:
+            model.fullName +
+            " applied for the job you posted, you both can now start a conversation. Go to conversation page to start a conversation with them.",
+          notId: job.postBy,
+          notFrom: model.uuid,
+        });
 
-      // console.log(client.email);
+        // console.log(client.email);
 
-      jobApply((modelName = model.fullName), (clientName = client.email));
-      res
-        .status(200)
-        .json(
-          "You have successfully applied for this job. You can now start conversation with the jobber."
-        );
+        jobApply((modelName = model.fullName), (clientName = client.email));
+        res
+          .status(200)
+          .json(
+            "You have successfully applied for this job. You can now start conversation with the jobber."
+          );
+      }
     }
   } catch (err) {
     res.status(500).json("Connection error!");
