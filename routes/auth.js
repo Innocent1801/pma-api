@@ -10,6 +10,13 @@ const Client = require("../models/Client");
 const { sendConfirmationEmail } = require("../config/nodemailer.config");
 const UserLogin = require("../models/UserLogin");
 const notification = require("../services/notifications");
+const { passwordRecovery } = require("../config/passwordRecovery.config");
+
+// generate subscription reference num
+const confirmMin = Math.ceil(10000);
+const confirmMax = Math.floor(90000);
+const confirm =
+  Math.floor(Math.random() * (confirmMax - confirmMin + 1)) + confirmMin;
 
 // registration
 router.post("/register", async (req, res) => {
@@ -151,7 +158,14 @@ router.post("/login", async (req, res) => {
             }
           );
 
-          const { password, ...others } = user._doc;
+          const {
+            password,
+            transactionPin,
+            currentTransactionPin,
+            recovery,
+            exp,
+            ...others
+          } = user._doc;
           await login.updateOne({ $inc: { login: +1 } });
 
           res.status(200).json({ ...others, client, accessToken });
@@ -169,7 +183,14 @@ router.post("/login", async (req, res) => {
             }
           );
 
-          const { password, ...others } = user._doc;
+          const {
+            password,
+            transactionPin,
+            currentTransactionPin,
+            recovery,
+            exp,
+            ...others
+          } = user._doc;
 
           switch (user.role) {
             case "agency":
@@ -210,14 +231,14 @@ router.post("/login", async (req, res) => {
           }
         }
       } else {
-        res.status(400).json("Email or password incorrect");
+        res.status(400).json({ message: "Email or password incorrect" });
       }
     } else {
-      res.status(400).json("Email or password incorrect");
+      res.status(400).json({ message: "Email or password incorrect" });
     }
   } catch (err) {
     // console.log(err)
-    res.status(500).json("Connection error!");
+    res.status(500).json({ message: "Connection error!" });
   }
 });
 
@@ -280,6 +301,73 @@ router.post("/login-pma/admin", async (req, res) => {
     }
   } catch (err) {
     res.status(500).json("Connection error!");
+  }
+});
+
+// forgot password processes
+
+//  enter email
+router.post("/password-recovery", async (req, res) => {
+  try {
+    const user = await Users.findOne({ email: req.body.email });
+
+    if (user) {
+      const currentTime = new Date();
+      const futureTime = new Date(currentTime.getTime() + 15 * 60000);
+
+      await user.updateOne({ $set: { recovery: confirm } });
+      await user.updateOne({ $set: { exp: futureTime } });
+
+      passwordRecovery((email = user.email), (code = confirm));
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// verify code
+router.get("/verify-code", async (req, res) => {
+  try {
+    const user = await Users.findOne({ recovery: req.body.recovery });
+
+    const currentTime = new Date();
+    const totalSeconds = (currentTime - user.exp) / 1000;
+
+    if (user) {
+      if (totalSeconds < 0) {
+        const accessToken = jwt.sign(
+          {
+            id: user._id,
+            uuid: user._id,
+            role: user.role,
+            email: user.email,
+          },
+          process.env.JWT_SEC,
+          {
+            expiresIn: "15m",
+          }
+        );
+
+        const {
+          password,
+          transactionPin,
+          currentTransactionPin,
+          recovery,
+          exp,
+          ...others
+        } = user._doc;
+
+        await user.updateOne({ $set: { recovery: null } });
+
+        res.status(200).json({ ...others, accessToken });
+      } else {
+        res.status(403).json("Recovery code expired already.");
+      }
+    } else {
+      res.status(400).json("The recovery code you entered is incorrect!");
+    }
+  } catch (err) {
+    res.status(500).json("Connectiob error!");
   }
 });
 

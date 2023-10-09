@@ -18,6 +18,8 @@ const UserSchema = new mongoose.Schema(
     isSubscribed: { type: Boolean, default: false },
     transactionPin: { type: String },
     currentTransactionPin: { type: String },
+    recovery: { type: String },
+    exp: { type: String },
   },
   { timestamps: true }
 );

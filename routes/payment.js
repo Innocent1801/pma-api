@@ -90,26 +90,22 @@ router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {
       const { query, page } = req.query;
       const pageSize = 10; // Number of items to return per page
 
-      const payment = await Payment.find({ sender: user.id });
+      const payment = await Payment.find({ sender: user.id })
+        .sort({ createdAt: -1 }) // Sort in descending order
+        .select()
+        .skip((parseInt(page) - 1) * pageSize)
+        .limit(pageSize);
 
-      let result = [];
+      const totalRecords = await Payment.countDocuments();
 
-      result = payment;
-
-      // Sort results in descending order based on createdAt date
-      result.sort((a, b) => b.createdAt - a.createdAt);
-
-      const totalPages = Math.ceil(result.length / pageSize);
+      const totalPages = Math.ceil(totalRecords / pageSize);
       const currentPage = parseInt(page) || 1;
-      const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const slicedResult = result.slice(startIndex, endIndex);
 
       const response = {
         totalPages,
         currentPage,
-        length: result.length,
-        payment: slicedResult,
+        length: totalRecords,
+        payment: payment,
       };
 
       res.status(200).json(response);
@@ -135,7 +131,16 @@ router.get("/payments", verifyTokenAndAuthorization, async (req, res) => {
       );
     };
 
-    const payments = await Payment.find();
+    const payments = await Payment.find()
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalRecords = await Payment.countDocuments();
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = parseInt(page) || 1;
 
     let result = [];
     if (payment) {
@@ -144,20 +149,11 @@ router.get("/payments", verifyTokenAndAuthorization, async (req, res) => {
       result = payments;
     }
 
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
-
-    const totalPages = Math.ceil(result.length / pageSize);
-    const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
-
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      payments: slicedResult,
+      length: totalRecords,
+      payments: payments,
     };
 
     if (response.length > 0) {

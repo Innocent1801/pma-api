@@ -46,56 +46,51 @@ router.get("/stats", verifyTokenAndAuthorization, async (req, res) => {
 router.get("/", verifyTokenAndAuthorization, async (req, res) => {
   try {
     // Pagination parameters
-    const { query, page, gender } = req.query;
-    const keys = ["country", "state"];
-    const genderKey = ["gender"];
+    const { query, page } = req.query;
+    const keys = ["country", "state", "gender"];
     const pageSize = 10; // Number of items to return per page
 
-    const search = (data) => {
-      return data?.filter((item) =>
+    const search = (items) => {
+      return items?.filter((item) =>
         keys.some((key) => item[key]?.toLowerCase()?.includes(query))
       );
     };
 
-    const searchGender = (data) => {
-      return data?.filter((item) =>
-        genderKey.some((key) => item[key]?.toLowerCase()?.includes(gender))
-      );
-    };
-
     const findModels = await Users.find({ isUpdated: true });
-    const users = findModels.map((item) => item.id);
-    const user = await Models.find({ uuid: { $in: users } });
 
-    let result = [];
-    if (query) {
-      result = search(user);
-    } else if (gender) {
-      result = searchGender(user);
-    } else {
-      result = user;
-    }
+    const userUuids = findModels.map((item) => item.id);
 
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
+    const models = await Models.find({ uuid: { $in: userUuids } })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
 
-    const totalPages = Math.ceil(result.length / pageSize);
+    const totalRecords = await Models.countDocuments({
+      uuid: { $in: userUuids },
+    });
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
     const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
+
+    let result = models;
+    if (query) {
+      result = search(models);
+    } else {
+      result = models;
+    }
 
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      models: slicedResult,
+      length: totalRecords,
+      models: result,
     };
 
     res.status(200).json(response);
   } catch (err) {
+    // console.error(err);
     res.status(500).json("Connection error!");
-    // console.log(err);
   }
 });
 
@@ -107,13 +102,19 @@ router.get("/models", verifyTokenAndAdmin, async (req, res) => {
     const keys = ["fullName", "email"];
     const pageSize = 10; // Number of items to return per page
 
-    const search = (data) => {
-      return data?.filter((item) =>
-        keys.some((key) => item[key]?.toLowerCase()?.includes(model))
+    const search = (items) => {
+      return items?.filter((item) =>
+        keys.some((key) => item[key]?.toLowerCase()?.includes(query))
       );
     };
 
-    const findModels = await Models.find();
+    const findModels = await Models.find()
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalRecords = await Models.countDocuments();
 
     let result = [];
     if (model) {
@@ -122,20 +123,11 @@ router.get("/models", verifyTokenAndAdmin, async (req, res) => {
       result = findModels;
     }
 
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
-
-    const totalPages = Math.ceil(result.length / pageSize);
-    const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
-
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      models: slicedResult,
+      length: totalRecords,
+      models: result,
     };
 
     if (response.length > 0) {

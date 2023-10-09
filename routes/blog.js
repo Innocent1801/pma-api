@@ -23,7 +23,16 @@ router.get("/blogs", async (req, res) => {
     const { query, page } = req.query;
     const pageSize = 10; // Number of items to return per page
 
-    const blog = await Blog.find();
+    const blog = await Blog.find()
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalRecords = await Blog.countDocuments();
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = parseInt(page) || 1;
 
     let result = [];
     if (query) {
@@ -32,20 +41,11 @@ router.get("/blogs", async (req, res) => {
       result = blog;
     }
 
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
-
-    const totalPages = Math.ceil(result.length / pageSize);
-    const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
-
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      blog: slicedResult,
+      length: totalRecords,
+      blog: result,
     };
 
     if (response.length > 0) {

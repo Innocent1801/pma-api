@@ -6,7 +6,7 @@ const PaymentSchema = new mongoose.Schema(
     senderEmail: { type: String },
     amount: { type: Number },
     desc: { type: String },
-    isApproved: { type: Boolean, default: false },
+    isApproved: { type: Boolean, default: true },
     endDate: { type: Date },
   },
   { timestamps: true }

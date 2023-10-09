@@ -127,6 +127,31 @@ router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// edit password
+router.put("/:id/password", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id);
+
+    if (bcrypt.compareSync(req.body.currentPassword, user.password)) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(req.body.password, salt);
+      req.body.password = hashedPassword;
+
+      const user = await Users.findByIdAndUpdate(
+        req.user.id,
+        { $set: req.body },
+        { new: true }
+      );
+
+      res.status(200).json(user);
+    } else {
+      res.status(400).json("Current password does not match");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
 // delete a user
 router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
   try {

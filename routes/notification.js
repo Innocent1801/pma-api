@@ -11,26 +11,22 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
     const { query, page } = req.query;
     const pageSize = 10;
 
-    const notifications = await Notification.find({ notId: req.params.id });
+    const notifications = await Notification.find({ notId: req.params.id })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
 
-    let result = [];
+    const totalRecords = await Notification.countDocuments();
 
-    result = notifications;
-
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
-
-    const totalPages = Math.ceil(result.length / pageSize);
+    const totalPages = Math.ceil(totalRecords / pageSize);
     const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
 
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      notifications: slicedResult,
+      length: totalRecords,
+      notifications: notifications,
     };
 
     if (user.id === req.params.id) {

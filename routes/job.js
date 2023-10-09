@@ -63,7 +63,16 @@ router.get("/jobs/all", async (req, res) => {
       );
     };
 
-    const jobs = await Job.find({ isAvailable: true });
+    const jobs = await Job.find({ isAvailable: true })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalRecords = await Job.countDocuments();
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = parseInt(page) || 1;
 
     let result = [];
     if (query) {
@@ -72,20 +81,11 @@ router.get("/jobs/all", async (req, res) => {
       result = jobs;
     }
 
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
-
-    const totalPages = Math.ceil(result.length / pageSize);
-    const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
-
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      jobs: slicedResult,
+      length: totalRecords,
+      jobs: result,
     };
 
     res.status(200).json(response);
@@ -103,7 +103,16 @@ router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
     const pageSize = 10; // Number of items to return per page
 
     const user = await Users.findById(req.user.id);
-    const jobs = await Job.find({ postBy: user.id });
+    const jobs = await Job.find({ postBy: user.id })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalRecords = await Job.countDocuments();
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = parseInt(page) || 1;
 
     let result = [];
     if (query) {
@@ -112,20 +121,11 @@ router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
       result = jobs;
     }
 
-    // Sort results in descending order based on createdAt date
-    result.sort((a, b) => b.createdAt - a.createdAt);
-
-    const totalPages = Math.ceil(result.length / pageSize);
-    const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
-
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      jobs: slicedResult,
+      length: totalRecords,
+      jobs: result,
     };
 
     if (response.length > 0) {

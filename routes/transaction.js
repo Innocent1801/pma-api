@@ -57,7 +57,11 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
     const client = await Client.findOne({ uuid: req.user.id });
     const user = await Users.findById(req.user.id);
 
-    const fundedHistory = await Wallet.find({ sender: client?.id });
+    const fundedHistory = await Wallet.find({ sender: client?.id })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
 
     const transferHistory = await Transfer.find({
       $or: [
@@ -65,9 +69,17 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
         { receiver: user?.username },
         { receiverId: user.id },
       ],
-    });
+    })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
 
-    const withdrawHistory = await Invoice.find({ withdrawBy: user?.email });
+    const withdrawHistory = await Invoice.find({ withdrawBy: user?.email })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
 
     // Merge the three arrays
     const combinedHistory = [
@@ -76,8 +88,14 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
       ...withdrawHistory,
     ];
 
-    // Sort the combined history array by timestamp in descending order
-    combinedHistory.sort((a, b) => b.createdAt - a.createdAt);
+    const totalFunded = await Wallet.countDocuments();
+    const totalTransfer = await Transfer.countDocuments();
+    const totalWithdraw = await Invoice.countDocuments();
+
+    const totalRecords = totalFunded + totalTransfer + totalWithdraw;
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = parseInt(page) || 1;
 
     let result = [];
     if (query) {
@@ -86,17 +104,11 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
       result = combinedHistory;
     }
 
-    const totalPages = Math.ceil(result.length / pageSize);
-    const currentPage = parseInt(page) || 1;
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const slicedResult = result.slice(startIndex, endIndex);
-
     const response = {
       totalPages,
       currentPage,
-      length: result.length,
-      transactions: slicedResult,
+      length: totalRecords,
+      transactions: combinedHistory,
     };
 
     res.status(200).json(response);

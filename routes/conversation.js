@@ -91,7 +91,16 @@ router.get("/open/:id", verifyTokenAndAuthorization, async (req, res) => {
     if (findConversation) {
       const findMessages = await Message.find({
         conversationId: findConversation._id,
-      });
+      })
+        .sort({ createdAt: -1 }) // Sort in descending order
+        .select()
+        .skip((parseInt(page) - 1) * pageSize)
+        .limit(pageSize);
+
+      const totalRecords = await Message.countDocuments();
+
+      const totalPages = Math.ceil(totalRecords / pageSize);
+      const currentPage = parseInt(page) || 1;
 
       if (
         findConversation.sender === user.id ||
@@ -105,22 +114,11 @@ router.get("/open/:id", verifyTokenAndAuthorization, async (req, res) => {
           await findConversation.updateOne({ $set: { receiverMessages: 0 } });
         }
 
-        result = findMessages;
-
-        // Sort results in descending order based on createdAt date
-        result.sort((a, b) => b.createdAt - a.createdAt);
-
-        const totalPages = Math.ceil(result.length / pageSize);
-        const currentPage = parseInt(page) || 1;
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const slicedResult = result.slice(startIndex, endIndex);
-
         const response = {
           totalPages,
           currentPage,
-          length: result.length,
-          conversation: slicedResult,
+          length: totalRecords,
+          conversation: findMessages,
         };
 
         res.status(200).json(response);
@@ -177,26 +175,22 @@ router.get(
 
       const findConversation = await Conversation.find({
         $or: [{ sender: req.params.param }, { receiver: req.params.param }],
-      });
+      })
+        .sort({ createdAt: -1 }) // Sort in descending order
+        .select()
+        .skip((parseInt(page) - 1) * pageSize)
+        .limit(pageSize);
 
-      let result = [];
+      const totalRecords = await Conversation.countDocuments();
 
-      result = findConversation;
-
-      // Sort results in descending order based on createdAt date
-      result.sort((a, b) => b.createdAt - a.createdAt);
-
-      const totalPages = Math.ceil(result.length / pageSize);
+      const totalPages = Math.ceil(totalRecords / pageSize);
       const currentPage = parseInt(page) || 1;
-      const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const slicedResult = result.slice(startIndex, endIndex);
 
       const response = {
         totalPages,
         currentPage,
-        length: result.length,
-        conversation: slicedResult,
+        length: totalRecords,
+        conversation: findConversation,
       };
 
       if (response.length > 0) {
