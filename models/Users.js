@@ -19,7 +19,7 @@ const UserSchema = new mongoose.Schema(
     transactionPin: { type: String },
     currentTransactionPin: { type: String },
     recovery: { type: String },
-    exp: { type: String },
+    exp: { type: Date },
   },
   { timestamps: true }
 );

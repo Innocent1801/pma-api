@@ -12,12 +12,6 @@ const UserLogin = require("../models/UserLogin");
 const notification = require("../services/notifications");
 const { passwordRecovery } = require("../config/passwordRecovery.config");
 
-// generate subscription reference num
-const confirmMin = Math.ceil(10000);
-const confirmMax = Math.floor(90000);
-const confirm =
-  Math.floor(Math.random() * (confirmMax - confirmMin + 1)) + confirmMin;
-
 // registration
 router.post("/register", async (req, res) => {
   try {
@@ -308,17 +302,31 @@ router.post("/login-pma/admin", async (req, res) => {
 
 //  enter email
 router.post("/password-recovery", async (req, res) => {
+  // generate subscription reference num
+  const confirmMin = Math.ceil(10000);
+  const confirmMax = Math.floor(90000);
+  const confirm =
+    Math.floor(Math.random() * (confirmMax - confirmMin + 1)) + confirmMin;
+
   try {
     const user = await Users.findOne({ email: req.body.email });
 
     if (user) {
       const currentTime = new Date();
-      const futureTime = new Date(currentTime.getTime() + 15 * 60000);
+      const futureTime = new Date(
+        currentTime.setMinutes(currentTime.getMinutes() + 15)
+      );
 
       await user.updateOne({ $set: { recovery: confirm } });
       await user.updateOne({ $set: { exp: futureTime } });
 
       passwordRecovery((email = user.email), (code = confirm));
+
+      res
+        .status(200)
+        .json({ message: "Recovery code has been sent to your email." });
+    } else {
+      res.status(404).json("Email not found.");
     }
   } catch (err) {
     res.status(500).json("Connection error!");
@@ -326,15 +334,15 @@ router.post("/password-recovery", async (req, res) => {
 });
 
 // verify code
-router.get("/verify-code", async (req, res) => {
+router.post("/verify-code", async (req, res) => {
   try {
     const user = await Users.findOne({ recovery: req.body.recovery });
 
-    const currentTime = new Date();
-    const totalSeconds = (currentTime - user.exp) / 1000;
-
     if (user) {
-      if (totalSeconds < 0) {
+      const currentTime = new Date();
+      const totalSeconds = (currentTime - user.exp) / 1000;
+
+      if (user.exp > currentTime) {
         const accessToken = jwt.sign(
           {
             id: user._id,
@@ -359,7 +367,7 @@ router.get("/verify-code", async (req, res) => {
 
         await user.updateOne({ $set: { recovery: null } });
 
-        res.status(200).json({ ...others, accessToken });
+        res.status(200).json({ id: user.id, accessToken: accessToken });
       } else {
         res.status(403).json("Recovery code expired already.");
       }
@@ -367,7 +375,7 @@ router.get("/verify-code", async (req, res) => {
       res.status(400).json("The recovery code you entered is incorrect!");
     }
   } catch (err) {
-    res.status(500).json("Connectiob error!");
+    res.status(500).json("Connection error!");
   }
 });
 

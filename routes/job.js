@@ -103,7 +103,9 @@ router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
     const pageSize = 10; // Number of items to return per page
 
     const user = await Users.findById(req.user.id);
-    const jobs = await Job.find({ postBy: user.id })
+    const jobs = await Job.find({
+      $or: [{ postBy: user.id }, { postBy: req.query.q }],
+    })
       .sort({ createdAt: -1 }) // Sort in descending order
       .select()
       .skip((parseInt(page) - 1) * pageSize)
