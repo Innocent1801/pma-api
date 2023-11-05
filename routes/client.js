@@ -128,19 +128,26 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 
     if (user) {
       await user.updateOne({ $set: { isUpdated: true } });
+      await user.updateOne({ $set: { isVerified: true } });
 
       res.status(200).json({ ...user._doc, client });
 
-      await notification.sendNotification({
-        notification: {},
-        notTitle:
-          user.firstName +
-          " " +
-          user.lastName +
-          " just updated their kyc, kindly review.",
-        notId: "639dc776aafcd38d67b1e2f7",
-        notFrom: user.id,
-      });
+      const userObject = { ...user, client };
+
+      if (!user.isUpdated) {
+        await notification.sendNotification({
+          notification: {},
+          notTitle:
+            user.firstName +
+            " " +
+            user.lastName +
+            " just updated their kyc, kindly review.",
+          notId: "639dc776aafcd38d67b1e2f7",
+          notFrom: user.id,
+          role: user.role,
+          user: userObject,
+        });
+      }
     } else {
       res.status(404).json("User not found!");
     }

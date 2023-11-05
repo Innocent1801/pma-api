@@ -9,6 +9,8 @@ const NotificationSchema = new mongoose.Schema(
     url: { type: String },
     isRead: { type: Boolean, default: false },
     notificationFrom: { type: String },
+    role: { type: String },
+    user: { type: Object },
   },
   { timestamps: true }
 );

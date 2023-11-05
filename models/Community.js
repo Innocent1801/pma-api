@@ -9,6 +9,7 @@ const CommunitySchema = new mongoose.Schema(
     username: { type: String },
     name: { type: String },
     picture: { type: String },
+    users: { type: Array },
   },
   { timestamps: true }
 );

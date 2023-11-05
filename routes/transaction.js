@@ -97,12 +97,8 @@ router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {
     const totalPages = Math.ceil(totalRecords / pageSize);
     const currentPage = parseInt(page) || 1;
 
-    let result = [];
-    if (query) {
-      result = search(combinedHistory);
-    } else {
-      result = combinedHistory;
-    }
+    // Sort the combined array by 'createdAt' timestamp in descending order
+    combinedHistory.sort((a, b) => b.createdAt - a.createdAt);
 
     const response = {
       totalPages,
@@ -155,6 +151,8 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
             });
           }
 
+          const userObject = { ...user, model };
+
           await notification.sendNotification({
             notification: {},
 
@@ -165,6 +163,8 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
                   ", kindly check your email for withdrawal details, thanks.",
             notId: "639dc776aafcd38d67b1e2f7",
             notFrom: user.id,
+            role: user.role,
+            user: userObject,
           });
 
           const fullName = model.fullName ? model.fullName : agency.fullName;
@@ -276,6 +276,8 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
                 client.brandName,
               notId: model.uuid,
               notFrom: client.id,
+              role: currentUser.role,
+              user: client,
             });
 
             const name = model.email ? model.email : agency.email;

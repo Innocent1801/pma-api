@@ -9,7 +9,7 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
     const user = req.user;
 
     const { query, page } = req.query;
-    const pageSize = 10;
+    const pageSize = 20;
 
     const notifications = await Notification.find({ notId: req.params.id })
       .sort({ createdAt: -1 }) // Sort in descending order
@@ -17,7 +17,9 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
       .skip((parseInt(page) - 1) * pageSize)
       .limit(pageSize);
 
-    const totalRecords = await Notification.countDocuments();
+    const totalRecords = await Notification.countDocuments({
+      notId: req.params.id,
+    });
 
     const totalPages = Math.ceil(totalRecords / pageSize);
     const currentPage = parseInt(page) || 1;
@@ -37,7 +39,6 @@ router.get("/:id", verifyTokenAndAuthorization, async (req, res) => {
         .json("You do not have permission to perform this action.");
     }
   } catch (err) {
-    console.log(err);
     res.status(500).json("Connection error!");
   }
 });

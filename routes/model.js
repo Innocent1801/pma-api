@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const BookModel = require("../models/BookModel");
+const Client = require("../models/Client");
 const Models = require("../models/Models");
 const Users = require("../models/Users");
 const notification = require("../services/notifications");
@@ -48,19 +49,22 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
     // Pagination parameters
     const { query, page } = req.query;
     const keys = ["country", "state", "gender"];
-    const pageSize = 10; // Number of items to return per page
-
-    const search = (items) => {
-      return items?.filter((item) =>
-        keys.some((key) => item[key]?.toLowerCase()?.includes(query))
-      );
-    };
+    const pageSize = 15; // Number of items to return per page
 
     const findModels = await Users.find({ isUpdated: true });
 
     const userUuids = findModels.map((item) => item.id);
 
     const models = await Models.find({ uuid: { $in: userUuids } })
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const queryModels = await Models.find({
+      uuid: { $in: userUuids },
+      $or: [{ country: query }, { state: query }, { gender: query }],
+    })
       .sort({ createdAt: -1 }) // Sort in descending order
       .select()
       .skip((parseInt(page) - 1) * pageSize)
@@ -75,7 +79,7 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 
     let result = models;
     if (query) {
-      result = search(models);
+      result = queryModels;
     } else {
       result = models;
     }
@@ -203,9 +207,21 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
 
     const user = await Users.findOne({ _id: model.uuid });
 
+    const {
+      password,
+      currentTransactionPin,
+      transactionPin,
+      recovery,
+      ...others
+    } = user._doc;
+
+    const userObject =
+      (await Models.findOne({ uuid: loggedUser.id })) ||
+      (await Client.findOne({ uuid: loggedUser.id }));
+
     if (user) {
       if (user.id !== req.user.id) {
-        await model.updateOne({ $set: { visitors: model.visitors + 1 } });
+        await model.updateOne({ $inc: { visitors: +1 } });
 
         // await notification.sendNotification({
         //   notification: {},
@@ -216,24 +232,28 @@ router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
         //     " viewed your portfolio.",
         //   notId: model.uuid,
         //   notFrom: loggedUser.id,
+        //   role: loggedUser.role,
+        //   user: userObject,
         // });
       }
 
-      res.status(200).json({ ...user._doc, model });
+      res.status(200).json({ ...others, model });
     } else if (!user) {
-      await model.updateOne({ $set: { visitors: visitors + 1 } });
+      await model.updateOne({ $inc: { visitors: +1 } });
 
-      await notification.sendNotification({
-        notification: {},
+      // await notification.sendNotification({
+      //   notification: {},
 
-        notTitle:
-          loggedUser.firstName +
-          " " +
-          loggedUser.lastName +
-          " viewed your portfolio.",
-        notId: model.uuid,
-        notFrom: loggedUser.id,
-      });
+      //   notTitle:
+      //     loggedUser.firstName +
+      //     " " +
+      //     loggedUser.lastName +
+      //     " viewed your portfolio.",
+      //   notId: model.uuid,
+      //   notFrom: loggedUser.id,
+      //   role: loggedUser.role,
+      //   user: userObject,
+      // });
 
       res.status(200).json({ model });
     } else {
@@ -255,23 +275,23 @@ router.get("/model/:param", async (req, res) => {
 
     if (user) {
       await model.updateOne({ $set: { visitors: model.visitors + 1 } });
-      await notification.sendNotification({
-        notification: {},
-        notTitle: "Someone viewed your portfolio.",
-        notId: model.uuid,
-        notFrom: "",
-      });
+      // await notification.sendNotification({
+      //   notification: {},
+      //   notTitle: "Someone viewed your portfolio.",
+      //   notId: model.uuid,
+      //   notFrom: "",
+      // });
 
       res.status(200).json({ ...user._doc, model });
     } else if (!user) {
       await model.updateOne({ $set: { visitors: visitors + 1 } });
 
-      await notification.sendNotification({
-        notification: {},
-        notTitle: "Someone viewed your portfolio.",
-        notId: model.uuid,
-        notFrom: "",
-      });
+      // await notification.sendNotification({
+      //   notification: {},
+      //   notTitle: "Someone viewed your portfolio.",
+      //   notId: model.uuid,
+      //   notFrom: "",
+      // });
 
       res.status(200).json({ model });
     } else {
@@ -297,6 +317,8 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
       { new: true }
     );
 
+    const userObject = { ...user, model };
+
     if (user) {
       await user.updateOne({ $set: { isUpdated: true } });
 
@@ -304,17 +326,21 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
 
       res.status(200).json({ ...others, model });
 
-      await notification.sendNotification({
-        notification: {},
+      if (!user.isUpdated) {
+        await notification.sendNotification({
+          notification: {},
 
-        notTitle:
-          user.firstName +
-          " " +
-          user.lastName +
-          " just updated their kyc, kindly review.",
-        notId: "639dc776aafcd38d67b1e2f7",
-        notFrom: user.id,
-      });
+          notTitle:
+            user.firstName +
+            " " +
+            user.lastName +
+            " just updated their kyc, kindly review.",
+          notId: "639dc776aafcd38d67b1e2f7",
+          notFrom: user.id,
+          role: user.role,
+          user: userObject,
+        });
+      }
     } else {
       res.status(404).json("User not found!");
     }
@@ -411,9 +437,84 @@ router.put("/remove/photo", verifyTokenAndAuthorization, async (req, res) => {
       res.status(400).json("Oops! An error occured");
     }
   } catch (err) {
-    console.log(err);
     res.status(500).json("Connection error!");
   }
 });
+
+// follow/unfollow model
+router.put(
+  "/follow/unfollow/:id",
+  verifyTokenAndAuthorization,
+  async (req, res) => {
+    try {
+      const user = await Users.findById(req.user.id);
+
+      if (user) {
+        const model = await Models.findById(req.params.id);
+
+        if (model) {
+          if (!model.followers.includes(user.id)) {
+            await model.updateOne({ $push: { followers: user.id } });
+
+            if (!model.users.includes(user.id)) {
+              await model.updateOne({ $push: { users: user.id } });
+            }
+
+            if (user.role === "model") {
+              const loggedUser = await Models.findOne({ uuid: user.id });
+
+              if (loggedUser) {
+                await loggedUser.updateOne({ $push: { followings: model.id } });
+              } else {
+                res.status(404).json("User does not exist.");
+              }
+            }
+
+            const userObject =
+              (await Models.findOne({ uuid: user.id })) ||
+              (await Client.findOne({ uuid: user.id }));
+
+            if (!model.users.includes(user.id)) {
+              await notification.sendNotification({
+                notification: {},
+                notTitle:
+                  user.firstName +
+                  " " +
+                  user.lastName +
+                  " started following you.",
+                notId: model.uuid,
+                notFrom: user.id,
+                role: user.role,
+                user: userObject,
+              });
+            }
+
+            res.status(200).json("You follow this user");
+          } else {
+            await model.updateOne({ $pull: { followers: user.id } });
+
+            if (user.role === "model") {
+              const loggedUser = await Models.findOne({ uuid: user.id });
+
+              if (loggedUser) {
+                await loggedUser.updateOne({ $pull: { followings: model.id } });
+              } else {
+                res.status(404).json("User does not exist.");
+              }
+            }
+
+            res.status(200).json("You unfollow this user");
+          }
+        } else {
+          res.status(404).json("User does not exist.");
+        }
+      } else {
+        res.status(400).json("You are not allowed to perform this operation.");
+      }
+    } catch (err) {
+      res.status(500).json("Connection error!");
+    }
+  }
+);
 
 module.exports = router;

@@ -35,6 +35,8 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
           " just updated their kyc, kindly review.",
         notId: "639dc776aafcd38d67b1e2f7",
         notFrom: user.id,
+        role: user.role,
+        user: user,
       });
     } else {
       res.status(404).json("User not found!");

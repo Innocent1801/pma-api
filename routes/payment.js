@@ -39,6 +39,8 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
           " just made their subscription payment, kindly review.",
         notId: "639dc776aafcd38d67b1e2f7",
         notFrom: user.id,
+        role: user.role,
+        user: user,
       });
     } else {
       res.status(400).json("Oops! An error occured");
@@ -87,7 +89,7 @@ router.get("/payments/user", verifyTokenAndAuthorization, async (req, res) => {
     const user = await Users.findById(req.user.id);
 
     if (user) {
-      const { query, page } = req.query;
+      const { page } = req.query;
       const pageSize = 10; // Number of items to return per page
 
       const payment = await Payment.find({ sender: user.id })

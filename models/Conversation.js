@@ -10,6 +10,7 @@ const ConversationSchema = new mongoose.Schema(
     receiverMessages: { type: Number, default: 0 },
     isClosed: { type: Boolean, default: false },
     lastMessage: { type: String },
+    lastMessageTime: { type: Date },
   },
   { timestamps: true }
 );

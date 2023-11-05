@@ -39,13 +39,17 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
           $set: { lastMessage: newMessage.message },
         });
 
+        await findConversation.updateOne({
+          $set: { lastMessageTime: Date.now() },
+        });
+
         if (findConversation.sender === user.id) {
           await findConversation.updateOne({
-            $set: { messages: findConversation.receiverMessages + 1 },
+            $inc: { receiverMessages: +1 },
           });
         } else if (findConversation.receiver === user.id) {
           await findConversation.updateOne({
-            $set: { messages: findConversation.senderMessages + 1 },
+            $inc: { senderMessages: +1 },
           });
         }
 
@@ -76,6 +80,7 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
     }
   } catch (err) {
     res.status(500).json("Connection error!");
+    console.log(err);
   }
 });
 
@@ -86,7 +91,7 @@ router.get("/open/:id", verifyTokenAndAuthorization, async (req, res) => {
     const findConversation = await Conversation.findById(req.params.id);
 
     const { page } = req.query;
-    const pageSize = 10; // Number of items to return per page
+    const pageSize = 15; // Number of items to return per page
 
     if (findConversation) {
       const findMessages = await Message.find({
@@ -169,9 +174,11 @@ router.get(
   verifyTokenAndAuthorization,
   async (req, res) => {
     try {
+      const user = await Users.findById(req.user.id);
+
       // Pagination parameters
       const { query, page } = req.query;
-      const pageSize = 10; // Number of items to return per page
+      const pageSize = 15; // Number of items to return per page
 
       const findConversation = await Conversation.find({
         $or: [{ sender: req.params.param }, { receiver: req.params.param }],
@@ -183,13 +190,49 @@ router.get(
 
       const totalRecords = await Conversation.countDocuments();
 
+      const unreadMsgRecords = await Conversation.aggregate([
+        {
+          $project: {
+            sender: 1,
+            receiver: 1,
+            senderMessages: 1,
+            receiverMessages: 1,
+          },
+        },
+      ]);
+
       const totalPages = Math.ceil(totalRecords / pageSize);
       const currentPage = parseInt(page) || 1;
+
+      const conversations = findConversation.map((item) => item.toObject());
+
+      let userInfo = [];
+      for (const conversationItem of conversations) {
+        if (conversationItem.receiver !== user.id) {
+          const conversationUser = await Users.findById(
+            conversationItem.receiver
+          );
+
+          if (conversationUser) {
+            userInfo.push(conversationUser);
+          }
+        } else if (conversationItem.sender !== user.id) {
+          const conversationUser = await Users.findById(
+            conversationItem.sender
+          );
+
+          if (conversationUser) {
+            userInfo.push(conversationUser);
+          }
+        }
+      }
 
       const response = {
         totalPages,
         currentPage,
         length: totalRecords,
+        user: userInfo,
+        unreadMsgRecords: unreadMsgRecords,
         conversation: findConversation,
       };
 

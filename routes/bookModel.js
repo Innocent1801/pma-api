@@ -20,7 +20,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
     });
 
     // const agency = await Agency.findOne({ uuid: model.uuid });
-    const client = await Client.findOne({ uuid: user._id });
+    const client = await Client.findOne({ uuid: user.id });
 
     if (user && user.isVerified && user.role === "client") {
       if (model) {
@@ -54,13 +54,19 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
               notTitle: bookModel.name + " requested for your service",
               notId: model.uuid,
               notFrom: user.id,
+              role: user.role,
+              user: client,
             });
 
             await client.updateOne({
               $inc: { locked: +bookModel.price },
             });
 
-            res.status(200).json("Model booked");
+            res
+              .status(200)
+              .json(
+                "Model booked! Please wait for model's confirmation of availability."
+              );
 
             sendBooking(
               (modelName = model.fullName),
@@ -71,7 +77,7 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
             res
               .status(403)
               .json(
-                "You cannot proceed with this booking, have booked client(s) that you have not settled their payment."
+                "You cannot proceed with this booking, have booked client(s) that you have not settled their payment yet."
               );
           }
         } else {
@@ -129,6 +135,8 @@ router.put("/accept/:id", verifyTokenAndAuthorization, async (req, res) => {
               " accepted your request for their service, you both can now start a conversation. Go to conversation page to start a conversation",
             notId: findClient.uuid,
             notFrom: user.id,
+            role: user.role,
+            user: findModel,
           });
 
           await findModel.updateOne({
@@ -197,6 +205,8 @@ router.put("/decline/:id", verifyTokenAndAuthorization, async (req, res) => {
               " declined your request for their service, you can go ahead to book another model.",
             notId: findClient.uuid,
             notFrom: user.id,
+            role: user.role,
+            user: findModel,
           });
 
           res.status(200).json("Request declined!");

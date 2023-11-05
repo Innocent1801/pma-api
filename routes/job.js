@@ -69,7 +69,7 @@ router.get("/jobs/all", async (req, res) => {
       .skip((parseInt(page) - 1) * pageSize)
       .limit(pageSize);
 
-    const totalRecords = await Job.countDocuments();
+    const totalRecords = await Job.countDocuments({ isAvailable: true });
 
     const totalPages = Math.ceil(totalRecords / pageSize);
     const currentPage = parseInt(page) || 1;
@@ -111,7 +111,9 @@ router.get("/jobs", verifyTokenAndAuthorization, async (req, res) => {
       .skip((parseInt(page) - 1) * pageSize)
       .limit(pageSize);
 
-    const totalRecords = await Job.countDocuments();
+    const totalRecords = await Job.countDocuments({
+      $or: [{ postBy: user.id }, { postBy: req.query.q }],
+    });
 
     const totalPages = Math.ceil(totalRecords / pageSize);
     const currentPage = parseInt(page) || 1;
@@ -173,6 +175,7 @@ router.delete("/job/:id", verifyTokenAndAdmin, async (req, res) => {
 // job application by model
 router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
   try {
+    const user = await Users.findById(req.user.id);
     const model = await Models.findOne({ uuid: req.user.id });
     const job = await Job.findById(req.params.id);
     const client = await Client.findOne({ uuid: job.postBy });
@@ -199,6 +202,8 @@ router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
             " applied for the job you posted, you both can now start a conversation. Go to conversation page to start a conversation with them.",
           notId: job.postBy,
           notFrom: model.uuid,
+          role: user.role,
+          user: model,
         });
 
         // console.log(client.email);

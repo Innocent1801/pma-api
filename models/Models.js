@@ -53,6 +53,7 @@ const ModelSchema = new mongoose.Schema(
     acceptedJobs: { type: Array },
     rejectedJobs: { type: Array },
     completedJobs: { type: Array },
+    users: { type: Array },
   },
   { timestamps: true }
 );
