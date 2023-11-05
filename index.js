@@ -4,7 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const socketIo = require("socket.io");
 const { default: axios } = require("axios");
-const { baseUrl } = require("./.routes");
+const { baseUrl } = require("./routes");
 
 const server = http.createServer(app);
 
@@ -66,9 +66,11 @@ app.get("/conversation/conversations/:id", async (req, res) => {
     const headers = req.headers;
 
     const result = await axios.get(
-      `${baseUrl}/conversation/conversations/${id}`,
+      `https://api2.premiummodelsapp.com/api/v2/conversation/conversations/${id}`,
       { headers }
     );
+
+    console.log(result.data, id);
 
     const response = result.data;
     const now = new Date();
@@ -82,6 +84,6 @@ app.get("/conversation/conversations/:id", async (req, res) => {
 });
 
 // connection to the server
-server.listen(process.env.PORT || 8501, () => {
-  console.log("Server running on port 8501");
+server.listen(process.env.PORT || 8502, () => {
+  console.log("Server running on port 8502");
 });
