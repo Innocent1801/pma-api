@@ -1,11 +1,18 @@
 const express = require("express");
 const app = express();
+const http = require("http");
+
+const server = http.createServer(app);
+const io = require("./services/socket")(server);
+
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const router = require("./routes/index");
+
+// io(server);
 
 dotenv.config();
 
@@ -29,6 +36,6 @@ app.use(helmet());
 app.use(router);
 
 // connection to the server
-app.listen(process.env.PORT || 8500, () => {
-  console.log("Server running on port 8500");
+server.listen(process.env.PORT || 8501, () => {
+  console.log("Server running on port 8501");
 });

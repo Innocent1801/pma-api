@@ -6,6 +6,11 @@ const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const Users = require("../models/Users");
 const { verifyTokenAndAuthorization } = require("./jwt");
+const { Server } = require("socket.io");
+const http = require("http");
+
+const server = http.createServer(Server);
+const io = require("../services/socket")(server);
 
 // send message
 router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
@@ -13,6 +18,10 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
     const user = req.user;
     const sender = await Users.findById(user.id);
     const findConversation = await Conversation.findById(req.params.id);
+
+    const recipientUserId = req.body.uuid;
+
+    console.log(recipientUserId);
 
     if (findConversation) {
       if (
@@ -54,6 +63,8 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
         }
 
         await newMessage.save();
+
+        io.to(recipientUserId).emit("chat message", newMessage);
 
         res.status(200).json(newMessage);
 
@@ -176,8 +187,12 @@ router.get(
     try {
       const user = await Users.findById(req.user.id);
 
+      const recipientUserId = req.query.uuid;
+
+      console.log(recipientUserId);
+
       // Pagination parameters
-      const { query, page } = req.query;
+      const { page } = req.query;
       const pageSize = 15; // Number of items to return per page
 
       const findConversation = await Conversation.find({
@@ -236,12 +251,14 @@ router.get(
         conversation: findConversation,
       };
 
-      if (response.length > 0) {
-        res.status(200).json(response);
-      } else {
-        res.status(404).json("Conversation cannot be found.");
-      }
+      io.to(recipientUserId).emit(
+        "chat conversation",
+        response.unreadMsgRecords
+      );
+
+      res.status(200).json(response);
     } catch (err) {
+      console.log(err);
       res.status(500).json("Connection error!");
     }
   }
