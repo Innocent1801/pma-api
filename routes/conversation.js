@@ -252,7 +252,6 @@ router.get(
         response.unreadMsgRecords
       );
 
-      console.log(response);
       res.status(200).json(response);
     } catch (err) {
       console.log(err);
