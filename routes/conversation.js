@@ -21,8 +21,6 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
 
     const recipientUserId = req.body.uuid;
 
-    console.log(recipientUserId);
-
     if (findConversation) {
       if (
         findConversation.sender === user.id ||
@@ -189,8 +187,6 @@ router.get(
 
       const recipientUserId = req.query.uuid;
 
-      console.log(recipientUserId);
-
       // Pagination parameters
       const { page } = req.query;
       const pageSize = 15; // Number of items to return per page
@@ -198,7 +194,7 @@ router.get(
       const findConversation = await Conversation.find({
         $or: [{ sender: req.params.param }, { receiver: req.params.param }],
       })
-        .sort({ createdAt: -1 }) // Sort in descending order
+        .sort({ updatedAt: -1 }) // Sort in descending order
         .select()
         .skip((parseInt(page) - 1) * pageSize)
         .limit(pageSize);
@@ -256,6 +252,7 @@ router.get(
         response.unreadMsgRecords
       );
 
+      console.log(response);
       res.status(200).json(response);
     } catch (err) {
       console.log(err);
