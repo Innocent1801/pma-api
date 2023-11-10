@@ -14,6 +14,7 @@ const ConversationRoute = require("./conversation");
 const BookModelRoute = require("./bookModel");
 const TransactionRoute = require("./transaction");
 const CommunityRoute = require("./community");
+const CommentRoute = require("./communityComment");
 
 router.use("/api/v2/auth", authRoute);
 router.use("/api/v2/model", modelRoute);
@@ -29,5 +30,6 @@ router.use("/api/v2/conversation", ConversationRoute);
 router.use("/api/v2/book", BookModelRoute);
 router.use("/api/v2/transaction", TransactionRoute);
 router.use("/api/v2/community", CommunityRoute);
+router.use("/api/v2/comment", CommentRoute);
 
 module.exports = router;

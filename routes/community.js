@@ -56,9 +56,17 @@ router.put("/react/:id", verifyTokenAndAuthorization, async (req, res) => {
           await post.updateOne({ $push: { likes: user.id } });
           await post.updateOne({ $push: { users: user.id } });
 
-          const userObject =
-            (await Models.findOne({ uuid: user.id })) ||
-            (await Client.findOne({ uuid: user.id }));
+          const model = await Models.findOne({ uuid: user.id });
+          const client = await Client.findOne({ uuid: user.id });
+
+          const {
+            password,
+            transactionPin,
+            currentTransactionPin,
+            recovery,
+            exp,
+            ...others
+          } = user._doc;
 
           if (post.postBy !== user.id) {
             if (!post.users.includes(user.id)) {
@@ -72,7 +80,7 @@ router.put("/react/:id", verifyTokenAndAuthorization, async (req, res) => {
                 notId: post.postBy,
                 notFrom: user.id,
                 role: user.role,
-                user: userObject,
+                user: user.role === "model" ? model : { ...others, client },
               });
             }
           }
