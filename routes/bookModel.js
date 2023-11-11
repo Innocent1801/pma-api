@@ -49,13 +49,15 @@ router.post("/book/:param", verifyTokenAndAuthorization, async (req, res) => {
 
             await bookModel.save();
 
+            const userObject = { ...user, client };
+
             await notification.sendNotification({
               notification: bookModel,
               notTitle: bookModel.name + " requested for your service",
               notId: model.uuid,
               notFrom: user.id,
               role: user.role,
-              user: client,
+              user: userObject,
             });
 
             await client.updateOne({

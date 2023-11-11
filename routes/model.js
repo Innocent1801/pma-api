@@ -470,6 +470,16 @@ router.put(
               }
             }
 
+            if (user.role === "client") {
+              const loggedUser = await Client.findOne({ uuid: user.id });
+
+              if (loggedUser) {
+                await loggedUser.updateOne({ $push: { followings: model.id } });
+              } else {
+                res.status(404).json("User does not exist.");
+              }
+            }
+
             const userObject =
               (await Models.findOne({ uuid: user.id })) ||
               (await Client.findOne({ uuid: user.id }));
@@ -495,6 +505,16 @@ router.put(
 
             if (user.role === "model") {
               const loggedUser = await Models.findOne({ uuid: user.id });
+
+              if (loggedUser) {
+                await loggedUser.updateOne({ $pull: { followings: model.id } });
+              } else {
+                res.status(404).json("User does not exist.");
+              }
+            }
+
+            if (user.role === "client") {
+              const loggedUser = await Client.findOne({ uuid: user.id });
 
               if (loggedUser) {
                 await loggedUser.updateOne({ $pull: { followings: model.id } });

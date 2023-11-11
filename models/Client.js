@@ -5,6 +5,7 @@ const ClientSchema = new mongoose.Schema(
     uuid: { type: String },
     email: { type: String },
     picture: { type: String },
+    followings:{type: Array},
     coverPicture: { type: String },
     brandName: { type: String },
     brandUrl: { type: String },

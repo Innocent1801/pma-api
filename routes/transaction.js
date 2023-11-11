@@ -151,8 +151,6 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
             });
           }
 
-          const userObject = { ...user, model };
-
           await notification.sendNotification({
             notification: {},
 
@@ -164,7 +162,7 @@ router.post("/withdraw", verifyTokenAndAuthorization, async (req, res) => {
             notId: "639dc776aafcd38d67b1e2f7",
             notFrom: user.id,
             role: user.role,
-            user: userObject,
+            user: model,
           });
 
           const fullName = model.fullName ? model.fullName : agency.fullName;
@@ -267,6 +265,8 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
 
             await newTransfer.save();
 
+            const userObject = { ...user, client };
+
             await notification.sendNotification({
               notification: {},
               notTitle:
@@ -277,7 +277,7 @@ router.post("/transfer", verifyTokenAndAuthorization, async (req, res) => {
               notId: model.uuid,
               notFrom: client.id,
               role: currentUser.role,
-              user: client,
+              user: userObject,
             });
 
             const name = model.email ? model.email : agency.email;
