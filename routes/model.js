@@ -318,7 +318,9 @@ router.put("/", verifyTokenAndAuthorization, async (req, res) => {
     );
 
     if (user) {
-      await user.updateOne({ $set: { isUpdated: true } });
+      if (!user.isUpdated) {
+        await user.updateOne({ $set: { isUpdated: true } });
+      }
 
       const { password, ...others } = user._doc;
 
