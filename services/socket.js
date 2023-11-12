@@ -11,6 +11,11 @@ module.exports = (server) => {
       socket.join(userId);
     });
 
+    socket.on("join conversation", (userId) => {
+      // Join the user to a room based on their userId
+      socket.join(userId);
+    });
+
     socket.on("chat message", (message, recipientUserId) => {
       // Send the message to the specific user's room
       io.to(recipientUserId).emit("chat message", message);

@@ -19,7 +19,7 @@ router.post("/send/:id", verifyTokenAndAuthorization, async (req, res) => {
     const sender = await Users.findById(user.id);
     const findConversation = await Conversation.findById(req.params.id);
 
-    const recipientUserId = req.body.uuid;
+    const recipientUserId = req.query.uuid;
 
     if (findConversation) {
       if (
