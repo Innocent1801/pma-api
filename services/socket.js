@@ -26,6 +26,12 @@ module.exports = (server) => {
       io.to(recipientUserId).emit("chat conversation", message);
     });
 
+    socket.on("conversation", (message, recipientUserId) => {
+      // Send the message to the specific user's room
+      console.log(message, recipientUserId);
+      io.to(recipientUserId).emit("conversation", message);
+    });
+
     socket.on("disconnect", () => {});
   });
 

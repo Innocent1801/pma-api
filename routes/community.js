@@ -20,6 +20,8 @@ router.post("/post", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const user = await Users.findById(req.user.id);
 
+    const model = await Models.findOne({ uuid: user.id });
+
     if (user) {
       const newPost = new Community({
         postBy: user.id,
@@ -28,6 +30,7 @@ router.post("/post", verifyTokenAndAuthorization, async (req, res) => {
         username: user.username,
         name: user.firstName + " " + user.lastName,
         picture: user.picture,
+        user: model,
       });
 
       await newPost.save();

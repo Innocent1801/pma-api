@@ -11,6 +11,7 @@ const ConversationSchema = new mongoose.Schema(
     isClosed: { type: Boolean, default: false },
     lastMessage: { type: String },
     lastMessageTime: { type: Date },
+    convId: { type: String },
   },
   { timestamps: true }
 );

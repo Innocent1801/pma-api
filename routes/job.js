@@ -189,6 +189,7 @@ router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
           );
       } else {
         await job.updateOne({ $push: { applied: model.uuid } });
+
         const newConversation = new Conversation({
           sender: model.uuid,
           receiver: job.postBy,

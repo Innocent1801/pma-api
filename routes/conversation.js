@@ -235,6 +235,14 @@ router.get(
           if (conversationUser) {
             userInfo.push(conversationUser);
           }
+        } else if (conversationItem.sender === conversationItem.receiver) {
+          const conversationUser = await Users.findById(
+            conversationItem.sender
+          );
+
+          if (conversationUser) {
+            userInfo.push(conversationUser);
+          }
         }
       }
 
@@ -254,11 +262,32 @@ router.get(
 
       res.status(200).json(response);
     } catch (err) {
-      console.log(err);
       res.status(500).json("Connection error!");
     }
   }
 );
+
+// find single conversation
+router.get("/:param", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const recipientUserId = req.query.uuid;
+
+    const conversation =
+      (await Conversation.findOne({
+        convId: req.params.param,
+      })) || (await Conversation.findById(req.params.param));
+
+    if (conversation) {
+      io.to(recipientUserId).emit("conversation", conversation);
+
+      res.status(200).json(conversation);
+    } else {
+      res.status(404).json("Not found!");
+    }
+  } catch (error) {
+    res.status(500).json("Connection error!");
+  }
+});
 
 // close conversation
 router.put(

@@ -54,6 +54,7 @@ const ModelSchema = new mongoose.Schema(
     rejectedJobs: { type: Array },
     completedJobs: { type: Array },
     users: { type: Array },
+    convIds: { type: Array },
   },
   { timestamps: true }
 );

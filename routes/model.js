@@ -1,10 +1,12 @@
 const router = require("express").Router();
 const BookModel = require("../models/BookModel");
 const Client = require("../models/Client");
+const Conversation = require("../models/Conversation");
 const Models = require("../models/Models");
 const Users = require("../models/Users");
 const notification = require("../services/notifications");
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
+const { v4: uuidv4 } = require("uuid");
 
 // get model's visitors stat
 router.get("/stats", verifyTokenAndAuthorization, async (req, res) => {
@@ -55,7 +57,10 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 
     const userUuids = findModels.map((item) => item.id);
 
-    const models = await Models.find({ uuid: { $in: userUuids } })
+    const models = await Models.find({
+      uuid: { $in: userUuids },
+      minPrice: { $gt: 0 },
+    })
       .sort({ createdAt: -1 }) // Sort in descending order
       .select()
       .skip((parseInt(page) - 1) * pageSize)
@@ -467,6 +472,25 @@ router.put(
                 await loggedUser.updateOne({ $push: { followings: model.id } });
               } else {
                 res.status(404).json("User does not exist.");
+              }
+
+              // new conversation
+              if (!model.users.includes(user.id)) {
+                const newConversation = new Conversation({
+                  sender: loggedUser.uuid,
+                  receiver: model.uuid,
+                  convId: uuidv4(),
+                });
+
+                await newConversation.save();
+
+                await loggedUser.updateOne({
+                  $push: { convIds: newConversation.convId },
+                });
+
+                await model.updateOne({
+                  $push: { convIds: newConversation.convId },
+                });
               }
             }
 
