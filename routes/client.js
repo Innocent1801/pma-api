@@ -177,4 +177,24 @@ router.put("/upload-photo", verifyTokenAndAuthorization, async (req, res) => {
   }
 });
 
+// remove photo
+router.put("/remove/photo", verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const user = Client.findOne({ uuid: req.user.id });
+
+    if (user) {
+      if (req.body.jobPhotos) {
+        await user.updateOne({ $pull: { jobPhotos: req.body.jobPhotos } });
+      }
+
+      res.status(200).json("Photo deleted!");
+    } else {
+      res.status(404).json("User not found!");
+    }
+  } catch (err) {
+    // console.log(err);
+    res.status(500).json("Connection error!");
+  }
+});
+
 module.exports = router;

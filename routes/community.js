@@ -5,6 +5,7 @@ const { verifyTokenAndAuthorization } = require("./jwt");
 const notification = require("../services/notifications");
 const Models = require("../models/Models");
 const Client = require("../models/Client");
+const CommunityComment = require("../models/CommunityComment");
 
 // Function to shuffle array using Fisher-Yates algorithm
 function shuffleArray(array) {
@@ -114,9 +115,15 @@ router.delete("/delete/:id", verifyTokenAndAuthorization, async (req, res) => {
       const post = await Community.findById(req.params.id);
 
       if (post) {
-        await Community.findByIdAndDelete(req.params.id);
+        if (post.postBy === user.id) {
+          await Community.findByIdAndDelete(req.params.id);
 
-        res.status(200).json("Post deleted successfully.");
+          await CommunityComment.deleteMany({ post: post.id });
+
+          res.status(200).json("Post deleted successfully.");
+        } else {
+          res.status(403).json("You are not allowed to perform this action");
+        }
       } else {
         res.status(404).json("Post not found!");
       }

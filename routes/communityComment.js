@@ -107,7 +107,7 @@ router.delete("/delete/:id", verifyTokenAndAuthorization, async (req, res) => {
     const user = await Users.findById(req.user.id);
 
     if (user) {
-      const postComment = await CommunityComment.findOne({
+      const postComment = await CommunityComment.findOneAndDelete({
         userId: req.params.id,
       });
 

@@ -327,4 +327,11 @@ router.put(
   }
 );
 
+// delete conversation & conversation messages
+router.delete(
+  "/delete/conversation/:id",
+  verifyTokenAndAuthorization,
+  async (req, res) => {}
+);
+
 module.exports = router;
