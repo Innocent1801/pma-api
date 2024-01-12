@@ -5,6 +5,8 @@ const Payment = require("../models/Payment");
 const Users = require("../models/Users");
 const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
 const notification = require("../services/notifications");
+const Ambssador = require("../models/Ambssador");
+const { ambModel } = require("../config/ambModel");
 
 // make payment
 router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
@@ -26,9 +28,30 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
       });
 
       await newPayment.save();
-      await user.updateOne({ $set: { isSubscribed: true } });
+
+      if (!user.isSubscribed) {
+        const getPer = (newPayment.amount * 15) / 100;
+
+        const amb = await Ambssador.findOne({ code: user.referral });
+
+        if (amb) {
+          await amb.updateOne({ $inc: { pendingModels: -1 } });
+          await amb.updateOne({ $inc: { activeModels: +1 } });
+          await amb.updateOne({ $inc: { totalEarning: +getPer } });
+          await amb.updateOne({ $inc: { availableBal: +getPer } });
+        }
+
+        await user.updateOne({ $set: { isSubscribed: true } });
+      }
 
       res.status(200).json("Payment successful");
+
+      ambModel(
+        (ambName = amb.firstName),
+        (ambEmail = amb.email),
+        (availableBal = amb.availableBal + getPer),
+        (totalEarning = amb.totalEarning + getPer)
+      );
 
       await notification.sendNotification({
         notification: {},

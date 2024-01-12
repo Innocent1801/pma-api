@@ -11,6 +11,7 @@ const { sendConfirmationEmail } = require("../config/nodemailer.config");
 const UserLogin = require("../models/UserLogin");
 const notification = require("../services/notifications");
 const { passwordRecovery } = require("../config/passwordRecovery.config");
+const Ambssador = require("../models/Ambssador");
 
 // registration
 router.post("/register", async (req, res) => {
@@ -34,6 +35,13 @@ router.post("/register", async (req, res) => {
       });
 
       await newUser.save();
+
+      if (req.body.referral) {
+        const amb = await Ambssador.findOne({ code: newUser.referral });
+
+        await amb.updateOne({ $push: { models: newUser.id } });
+        await amb.updateOne({ $inc: { pendingModels: +1 } });
+      }
 
       const accessToken = jwt.sign(
         {

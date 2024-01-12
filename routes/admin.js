@@ -9,6 +9,9 @@ const Models = require("../models/Models");
 const Agency = require("../models/Agency");
 const { sendConfirmationEmail } = require("../config/nodemailer.config");
 const UserLogin = require("../models/UserLogin");
+const Ambssador = require("../models/Ambssador");
+const uuid = require("uuid");
+const { createAmbassador } = require("../config/newAmbassador");
 
 // get users stat
 router.get("/stats", async (req, res) => {
@@ -324,6 +327,101 @@ router.delete("/client/:id", verifyTokenAndAdmin, async (req, res) => {
       res.status(404).json("User not found!");
     }
   } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// admin create an ambassador
+router.post("/create-ambassador", async (req, res) => {
+  try {
+    const ambassador = await Ambssador.findOne({ email: req.body.email });
+
+    const newCode = uuid.v4();
+
+    const slicedCode = newCode.slice(0, 8);
+
+    if (!ambassador) {
+      const newAmbassador = new Ambssador({
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        email: req.body.email,
+        phoneNo: req.body.phoneNo,
+        start: req.body.start,
+        end: req.body.end,
+        location: req.body.location,
+        code: slicedCode,
+      });
+
+      await newAmbassador.save();
+
+      res
+        .status(200)
+        .json(`Ambassador successfully created. Amb code is ${slicedCode}`);
+
+      createAmbassador(
+        (ambName = newAmbassador.firstName),
+        (code = slicedCode),
+        (ambEmail = newAmbassador.email)
+      );
+    } else {
+      res
+        .status(400)
+        .json(
+          "Ambassador with the email already exist, kindly try another email."
+        );
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// get ambassadors
+router.get("/ambassadors/all", async (req, res) => {
+  try {
+    const { page } = req.query;
+    const pageSize = 20;
+
+    const amb = await Ambssador.find()
+      .sort({ createdAt: -1 }) // Sort in descending order
+      .select()
+      .skip((parseInt(page) - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalRecords = await Ambssador.countDocuments();
+
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const currentPage = parseInt(page) || 1;
+
+    const response = {
+      totalPages,
+      currentPage,
+      length: totalRecords,
+      models: amb,
+    };
+
+    res.status(200).json(response);
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+// edit amb
+router.put("/amb-edit/:id", async (req, res) => {
+  try {
+    const amb = await Ambssador.findById(req.params.id);
+
+    if (amb) {
+      const editAmb = await Ambssador.findByIdAndUpdate(
+        req.params.id,
+        { $set: req.body },
+        { new: true }
+      );
+
+      res.status(200).json(editAmb);
+    } else {
+      res.status(404).json("Not found!");
+    }
+  } catch (error) {
     res.status(500).json("Connection error!");
   }
 });

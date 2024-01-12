@@ -48,6 +48,9 @@ npm manifest:
       "nodemon": "^2.0.20",
       "socket.io": "^4.7.2",
       "uuid": "^9.0.1"
+    },
+    "devDependencies": {
+      "@types/uuid": "^9.0.7"
     }
   }
 
@@ -839,6 +842,11 @@ Lockfile:
     version "18.11.15"
     resolved "https://registry.npmjs.org/@types/node/-/node-18.11.15.tgz"
     integrity sha512-VkhBbVo2+2oozlkdHXLrb3zjsRkpdnaU2bXmX8Wgle3PUi569eLRaHGlgETQHR7lLL1w7GiG3h9SnePhxNDecw==
+  
+  "@types/uuid@^9.0.7":
+    version "9.0.7"
+    resolved "https://registry.npmjs.org/@types/uuid/-/uuid-9.0.7.tgz"
+    integrity sha512-WUtIVRUZ9i5dYXefDEAI7sh9/O7jGvHg7Df/5O/gtH3Yabe5odI3UWopVR1qbPXQtvOxWu3mM4XxlYeZtMWF4g==
   
   "@types/webidl-conversions@*":
     version "7.0.0"
