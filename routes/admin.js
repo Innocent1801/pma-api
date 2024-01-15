@@ -332,7 +332,7 @@ router.delete("/client/:id", verifyTokenAndAdmin, async (req, res) => {
 });
 
 // admin create an ambassador
-router.post("/create-ambassador", async (req, res) => {
+router.post("/create-ambassador", verifyTokenAndAdmin, async (req, res) => {
   try {
     const ambassador = await Ambssador.findOne({ email: req.body.email });
 
@@ -349,6 +349,7 @@ router.post("/create-ambassador", async (req, res) => {
         start: req.body.start,
         end: req.body.end,
         location: req.body.location,
+        picture: req.body.picture,
         code: slicedCode,
       });
 
@@ -376,7 +377,7 @@ router.post("/create-ambassador", async (req, res) => {
 });
 
 // get ambassadors
-router.get("/ambassadors/all", async (req, res) => {
+router.get("/ambassadors/all", verifyTokenAndAdmin, async (req, res) => {
   try {
     const { page } = req.query;
     const pageSize = 20;
@@ -406,7 +407,7 @@ router.get("/ambassadors/all", async (req, res) => {
 });
 
 // edit amb
-router.put("/amb-edit/:id", async (req, res) => {
+router.put("/amb-edit/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const amb = await Ambssador.findById(req.params.id);
 
