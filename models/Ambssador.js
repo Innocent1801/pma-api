@@ -14,9 +14,9 @@ const AmbassadorSchema = new mongoose.Schema(
     models: { type: Array },
     activeModels: { type: Number, default: 0 },
     pendingModels: { type: Number, default: 0 },
-    totalEarning: { typr: Number, default: 0 },
-    availableBal: { typr: Number, default: 0 },
-    payout: { typr: Number, default: 0 },
+    totalEarning: { type: Number, default: 0 },
+    availableBal: { type: Number, default: 0 },
+    payout: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
