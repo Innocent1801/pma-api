@@ -406,6 +406,14 @@ router.get("/ambassadors/all", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
+router.get("/ambassadors/activate/bal", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const amb = await Ambssador.find()
+  } catch (error) {
+    
+  }
+})
+
 // edit amb
 router.put("/amb-edit/:id", verifyTokenAndAdmin, async (req, res) => {
   try {

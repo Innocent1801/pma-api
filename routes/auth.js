@@ -181,7 +181,7 @@ router.post("/login", async (req, res) => {
             },
             process.env.JWT_SEC,
             {
-              expiresIn: "24h",
+              expiresIn: "30d",
             }
           );
 

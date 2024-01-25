@@ -68,7 +68,7 @@ router.get("/", verifyTokenAndAuthorization, async (req, res) => {
 
     const queryModels = await Models.find({
       uuid: { $in: userUuids },
-      $or: [{ country: query }, { state: query }, { gender: query }],
+      $or: [{ country: query }, { state: query }, { gender: query }, { username: query }],
     })
       .sort({ createdAt: -1 }) // Sort in descending order
       .select()
