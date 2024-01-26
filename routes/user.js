@@ -183,4 +183,45 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
+router.post("/account/delete", async (req, res) => {
+  try {
+    const user = await Users.findOne({ email: req.body.email });
+
+
+    if (user) {
+      if (bcrypt.compareSync(req.body.password, user.password)) {
+        if (user.role === "client") {
+          await Client.findOneAndDelete({ uuid: user._id });
+
+          await user.delete();
+
+          res.status(200).json("Account deleted successfully!");
+        } else if (user.role === "model") {
+          await Models.findOneAndDelete({ uuid: user._id });
+
+          await user.delete();
+
+          res.status(200).json("Account deleted successfully!");
+        } else if (user.role === "agency") {
+          await Agency.findOneAndDelete({ uuid: user._id });
+
+          await user.delete();
+
+          res.status(200).json("Account deleted successfully!");
+        } else {
+          await user.delete();
+
+          res.status(200).json("Account deleted successfully!");
+        }
+      } else {
+        res.status(400).json("Password does not match with account.");
+      }
+    } else {
+      res.status(404).json("Account not found!");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
 module.exports = router;

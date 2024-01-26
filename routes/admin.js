@@ -406,13 +406,46 @@ router.get("/ambassadors/all", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
-router.get("/ambassadors/activate/bal", verifyTokenAndAdmin, async (req, res) => {
+router.get("/ambassadors/activate/bal", async (req, res) => {
   try {
-    const amb = await Ambssador.find()
-  } catch (error) {
-    
-  }
-})
+    const amb = await Ambssador.find();
+
+    const ambU = amb.flatMap((item) => item.models);
+
+    let models = [];
+    for (const userId of ambU) {
+      const model = await Users.findById(userId);
+
+      if (model && model.isSubscribed) {
+        models.push(model);
+
+        const ambId = await Ambssador.findOne({ code: model.referral })
+
+        console.log(ambId)
+
+        // if (ambId) {
+        //   await ambId.updateOne({ $inc: { pendingModels: -1 } });
+        //   await ambId.updateOne({ $inc: { activeModels: +1 } });
+        //   await ambId.updateOne({ $inc: { totalEarning: +getPer } });
+        //   await ambId.updateOne({ $inc: { availableBal: +getPer } });
+        // }
+      }
+    }
+
+    const amba = models.flatMap((item) => item.referral);
+
+    let ambsad = [];
+    for (const ambRef of amba) {
+      const ambId = await Ambssador.findOne({ code: ambRef });
+
+      if (ambId) {
+        ambsad.push(ambId);
+      }
+    }
+
+    res.status(200).json(ambsad);
+  } catch (error) {}
+});
 
 // edit amb
 router.put("/amb-edit/:id", verifyTokenAndAdmin, async (req, res) => {
