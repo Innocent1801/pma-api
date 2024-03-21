@@ -461,6 +461,7 @@ router.put(
           if (!model.followers.includes(user.id)) {
             await model.updateOne({ $push: { followers: user.id } });
 
+            // to avoid repetition of notifications
             if (!model.users.includes(user.id)) {
               await model.updateOne({ $push: { users: user.id } });
             }

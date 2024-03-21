@@ -7,6 +7,12 @@ const { verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./jwt");
 const notification = require("../services/notifications");
 const Ambssador = require("../models/Ambssador");
 const { ambModel } = require("../config/ambModel");
+const dotenv = require("dotenv");
+const crypto = require("crypto");
+const Client = require("../models/Client");
+const Wallet = require("../models/Wallet");
+
+dotenv.config();
 
 // make payment
 router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
@@ -67,6 +73,109 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
       });
     } else {
       res.status(400).json("Oops! An error occured");
+    }
+  } catch (err) {
+    res.status(500).json("Connection error!");
+  }
+});
+
+router.post("/make-payment/v2", async (req, res) => {
+  const secret = process.env.PAYSTACK_LIVE_SECRET;
+
+  const payload = req.body;
+
+  // Extract event type and data
+  const eventType = payload?.event;
+  const transactionDataAmount = payload?.data?.amount / 100;
+
+  const customer = payload?.data?.customer;
+  const customerEmail = customer?.email;
+
+  try {
+    const hash = crypto
+      .createHmac("sha512", secret)
+      .update(JSON.stringify(req.body))
+      .digest("hex");
+
+    if (hash == req.headers["x-paystack-signature"]) {
+      if (eventType === "charge.success") {
+        const user = await Users.findOne({ email: customerEmail });
+        const client = await Client.findOne({ uuid: user.id });
+
+        const currentTime = new Date();
+        const futureDate = new Date(
+          currentTime.setFullYear(currentTime.getFullYear() + 1)
+        );
+
+        if (user.role === "model" || user.role === "agency") {
+          const newPayment = new Payment({
+            sender: user.id,
+            senderEmail: user.email,
+            amount: transactionDataAmount,
+            endDate: futureDate,
+            desc:
+              user.role === "model"
+                ? "Model Subscription"
+                : "Agency Subscription",
+          });
+
+          await newPayment.save();
+
+          if (!user.isSubscribed) {
+            const getPer = (newPayment.amount * 15) / 100;
+
+            const amb = await Ambssador.findOne({ code: user.referral });
+
+            if (amb) {
+              await amb.updateOne({ $inc: { pendingModels: -1 } });
+              await amb.updateOne({ $inc: { activeModels: +1 } });
+              await amb.updateOne({ $inc: { totalEarning: +getPer } });
+              await amb.updateOne({ $inc: { availableBal: +getPer } });
+            }
+
+            await user.updateOne({ $set: { isSubscribed: true } });
+          }
+
+          // res.status(200).json("Payment successful");
+          res.sendStatus(200);
+
+          ambModel(
+            (ambName = amb.firstName),
+            (ambEmail = amb.email),
+            (availableBal = amb.availableBal + getPer),
+            (totalEarning = amb.totalEarning + getPer)
+          );
+
+          await notification.sendNotification({
+            notification: {},
+            notTitle:
+              user.firstName +
+              " " +
+              user.lastName +
+              " just made their subscription payment, kindly review.",
+            notId: "639dc776aafcd38d67b1e2f7",
+            notFrom: user.id,
+            role: user.role,
+            user: user,
+          });
+        } else if (user.role === "client" && client) {
+          const newPayment = new Wallet({
+            sender: client.id,
+            senderEmail: client.email,
+            amount: transactionDataAmount,
+            desc: "Wallet funding",
+          });
+
+          await newPayment.save();
+          await client.updateOne({ $inc: { wallet: +transactionDataAmount } });
+          await client.updateOne({ $inc: { total: +transactionDataAmount } });
+
+          // res.status(200).json("Payment successful");
+          res.sendStatus(200);
+        } else {
+          res.status(400).json("Oops! An error occured");
+        }
+      }
     }
   } catch (err) {
     res.status(500).json("Connection error!");

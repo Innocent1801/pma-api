@@ -12,6 +12,8 @@ const Agency = require("../models/Agency");
 const notification = require("../services/notifications");
 const { PaymentNot } = require("../config/payment.config");
 const { WithdrawalNot } = require("../config/withdrawal.config");
+const dotenv = require("dotenv");
+const crypto = require("crypto");
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -46,6 +48,56 @@ router.post("/fund_wallet", verifyTokenAndAuthorization, async (req, res) => {
     res.status(500).json("Connection error!");
   }
 });
+
+router.post(
+  "/fund_wallet/v2",
+  verifyTokenAndAuthorization,
+  async (req, res) => {
+    const secret = process.env.PAYSTACK_SECRET;
+
+    const payload = req.body;
+
+    // Extract event type and data
+    const eventType = payload?.event;
+    const transactionDataAmount = payload?.data?.amount / 100;
+
+    const customer = payload?.data?.customer;
+    const customerEmail = customer?.email;
+
+    try {
+      const hash = crypto
+        .createHmac("sha512", secret)
+        .update(JSON.stringify(req.body))
+        .digest("hex");
+
+      if (hash == req.headers["x-paystack-signature"]) {
+        if (eventType === "charge.success") {
+          const user = await Client.findOne({ email: customerEmail });
+
+          if (user) {
+            const newPayment = new Wallet({
+              sender: user.id,
+              senderEmail: user.email,
+              amount: transactionDataAmount,
+              desc: "Wallet funding",
+            });
+
+            await newPayment.save();
+            await user.updateOne({ $inc: { wallet: +transactionDataAmount } });
+            await user.updateOne({ $inc: { total: +transactionDataAmount } });
+
+            res.sendStatus(200);
+            // res.status(200).json("Payment successful");
+          }
+        }
+      } else {
+        res.status(400).json("Oops! An error occured");
+      }
+    } catch (err) {
+      res.status(500).json("Connection error!");
+    }
+  }
+);
 
 // get transaction history
 router.get("/wallet_history", verifyTokenAndAuthorization, async (req, res) => {

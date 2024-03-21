@@ -187,7 +187,6 @@ router.post("/account/delete", async (req, res) => {
   try {
     const user = await Users.findOne({ email: req.body.email });
 
-
     if (user) {
       if (bcrypt.compareSync(req.body.password, user.password)) {
         if (user.role === "client") {

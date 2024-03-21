@@ -416,6 +416,8 @@ router.get("/ambassadors/activate/bal", async (req, res) => {
     for (const userId of ambU) {
       const model = await Users.findById(userId);
 
+      const getPer = (2000 * 15) / 100;
+
       if (model && model.isSubscribed) {
         models.push(model);
 

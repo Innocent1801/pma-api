@@ -185,22 +185,22 @@ router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
         res
           .status(403)
           .json(
-            "You have already applied for this job, kindly continue conversation with the jobber."
+            "You have already applied for this job."
           );
       } else {
         await job.updateOne({ $push: { applied: model.uuid } });
 
-        const newConversation = new Conversation({
-          sender: model.uuid,
-          receiver: job.postBy,
-        });
-        await newConversation.save();
+        // const newConversation = new Conversation({
+        //   sender: model.uuid,
+        //   receiver: job.postBy,
+        // });
+        // await newConversation.save();
 
         await notification.sendNotification({
           notification: {},
           notTitle:
             model.fullName +
-            " applied for the job you posted, you both can now start a conversation. Go to conversation page to start a conversation with them.",
+            " just applied for the job you posted.",
           notId: job.postBy,
           notFrom: model.uuid,
           role: user.role,

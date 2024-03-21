@@ -2,7 +2,7 @@ Arguments:
   /home/victor/.nvm/versions/node/v20.1.0/bin/node /home/victor/.nvm/versions/node/v20.1.0/bin/yarn outdated --json
 
 PATH: 
-  /home/victor/.nvm/versions/node/v20.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/victor/Android/Sdk
+  /home/victor/.sdkman/candidates/java/current/bin:/home/victor/.nvm/versions/node/v20.1.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/victor/Android/Sdk
 
 Yarn version: 
   1.22.19
