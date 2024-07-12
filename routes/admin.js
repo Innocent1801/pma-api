@@ -384,9 +384,7 @@ router.get("/ambassadors/all", verifyTokenAndAdmin, async (req, res) => {
 
     const amb = await Ambssador.find()
       .sort({ createdAt: -1 }) // Sort in descending order
-      .select()
-      .skip((parseInt(page) - 1) * pageSize)
-      .limit(pageSize);
+      .exec()
 
     const totalRecords = await Ambssador.countDocuments();
 

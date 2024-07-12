@@ -53,7 +53,7 @@ router.post(
   "/fund_wallet/v2",
   verifyTokenAndAuthorization,
   async (req, res) => {
-    const secret = process.env.PAYSTACK_SECRET;
+    const secret = process.env.PAYSTACK_LIVE_SECRET;
 
     const payload = req.body;
 

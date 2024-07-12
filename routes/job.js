@@ -213,7 +213,7 @@ router.post("/job/apply/:id", verifyTokenAndAuthorization, async (req, res) => {
         res
           .status(200)
           .json(
-            "You have successfully applied for this job. You can now start conversation with the jobber."
+            "You have successfully applied for this job."
           );
       }
     }

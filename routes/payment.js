@@ -47,17 +47,17 @@ router.post("/make-payment", verifyTokenAndAuthorization, async (req, res) => {
           await amb.updateOne({ $inc: { availableBal: +getPer } });
         }
 
+        ambModel(
+          (ambName = amb.firstName),
+          (ambEmail = amb.email),
+          (availableBal = amb.availableBal + getPer),
+          (totalEarning = amb.totalEarning + getPer)
+        );
+
         await user.updateOne({ $set: { isSubscribed: true } });
       }
 
       res.status(200).json("Payment successful");
-
-      ambModel(
-        (ambName = amb.firstName),
-        (ambEmail = amb.email),
-        (availableBal = amb.availableBal + getPer),
-        (totalEarning = amb.totalEarning + getPer)
-      );
 
       await notification.sendNotification({
         notification: {},
@@ -100,7 +100,6 @@ router.post("/make-payment/v2", async (req, res) => {
     if (hash == req.headers["x-paystack-signature"]) {
       if (eventType === "charge.success") {
         const user = await Users.findOne({ email: customerEmail });
-        const client = await Client.findOne({ uuid: user.id });
 
         const currentTime = new Date();
         const futureDate = new Date(
@@ -131,6 +130,13 @@ router.post("/make-payment/v2", async (req, res) => {
               await amb.updateOne({ $inc: { activeModels: +1 } });
               await amb.updateOne({ $inc: { totalEarning: +getPer } });
               await amb.updateOne({ $inc: { availableBal: +getPer } });
+
+              ambModel(
+                (ambName = amb.firstName),
+                (ambEmail = amb.email),
+                (availableBal = amb.availableBal + getPer),
+                (totalEarning = amb.totalEarning + getPer)
+              );
             }
 
             await user.updateOne({ $set: { isSubscribed: true } });
@@ -138,13 +144,6 @@ router.post("/make-payment/v2", async (req, res) => {
 
           // res.status(200).json("Payment successful");
           res.sendStatus(200);
-
-          ambModel(
-            (ambName = amb.firstName),
-            (ambEmail = amb.email),
-            (availableBal = amb.availableBal + getPer),
-            (totalEarning = amb.totalEarning + getPer)
-          );
 
           await notification.sendNotification({
             notification: {},
@@ -158,7 +157,9 @@ router.post("/make-payment/v2", async (req, res) => {
             role: user.role,
             user: user,
           });
-        } else if (user.role === "client" && client) {
+        } else if (user.role === "client") {
+          const client = await Client.findOne({ uuid: user.id });
+
           const newPayment = new Wallet({
             sender: client.id,
             senderEmail: client.email,
